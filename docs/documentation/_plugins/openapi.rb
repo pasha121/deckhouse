@@ -546,7 +546,6 @@ module Jekyll
     def format_configuration(input)
         converter = Jekyll::Converters::Markdown::KramdownParser.new(Jekyll.configuration())
         result = []
-        result.push('<div markdown="0">')
 
         if input.nil?
            input = {}
@@ -560,6 +559,15 @@ module Jekyll
            input['i18n']['en'] = { "properties" => input['properties'] }
         end
 
+        configVersion = 1
+        if ( get_hash_value(input, "x-config-version") ) then
+          configVersion = input['x-config-version']
+        end
+        result.push('<p>')
+        result.push('spec.version: %d' % configVersion)
+        result.push('</p>')
+
+        result.push('<div markdown="0">')
         result.push(format_examples(nil, input, converter))
 
         if ( get_hash_value(input, "properties") )
