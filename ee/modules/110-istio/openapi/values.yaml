@@ -159,3 +159,10 @@ properties:
             type: string
             x-examples:
               - plainstring
+      auth:
+        type: object
+        default: {}
+        properties:
+          password:
+            type: string
+            x-examples: ["p4ssw0rd"]
