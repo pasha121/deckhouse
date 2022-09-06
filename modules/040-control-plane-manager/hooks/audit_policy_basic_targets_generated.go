@@ -75,7 +75,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"ingress-nginx",
 	"kiali",
 	"kube-state-metrics",
-	"kubevirt-operator",
 	"legacy-cert-manager",
 	"legacy-webhook",
 	"linstor-affinity-controller",
