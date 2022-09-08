@@ -18,37 +18,23 @@ package conversion
 
 type ConversionFunc func(configValues map[string]interface{}) (map[string]interface{}, error)
 
-type Conversion interface {
-	Source() string
-	Target() string
-	Convert(values map[string]interface{}) (map[string]interface{}, error)
+type Conversion struct {
+	Source     int
+	Target     int
+	Conversion ConversionFunc
 }
 
-type anonymousConversion struct {
-	src    string
-	target string
-	fn     ConversionFunc
-}
-
-func (a *anonymousConversion) Source() string {
-	return a.src
-}
-
-func (a *anonymousConversion) Target() string {
-	return a.target
-}
-
-func (a *anonymousConversion) Convert(configValues map[string]interface{}) (map[string]interface{}, error) {
-	if a.fn != nil {
-		return a.fn(configValues)
+func (c *Conversion) Convert(configValues map[string]interface{}) (map[string]interface{}, error) {
+	if c.Conversion == nil {
+		return nil, nil
 	}
-	return nil, nil
+	return c.Conversion(configValues)
 }
 
-func NewAnonymousConversion(srcVersion string, targetVersion string, conversionFunc ConversionFunc) Conversion {
-	return &anonymousConversion{
-		src:    srcVersion,
-		target: targetVersion,
-		fn:     conversionFunc,
+func NewConversion(srcVersion int, targetVersion int, conversionFunc ConversionFunc) *Conversion {
+	return &Conversion{
+		Source:     srcVersion,
+		Target:     targetVersion,
+		Conversion: conversionFunc,
 	}
 }

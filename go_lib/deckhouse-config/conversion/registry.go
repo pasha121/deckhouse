@@ -28,8 +28,10 @@ Registry. Conversion webhook will use these functions to convert values in
 DeckhouseConfig objects to latest version.
 */
 
-var instance *ConvRegistry
-var once sync.Once
+var (
+	instance *ConvRegistry
+	once     sync.Once
+)
 
 func Registry() *ConvRegistry {
 	once.Do(func() {
@@ -39,14 +41,14 @@ func Registry() *ConvRegistry {
 }
 
 // Register adds Conversion implementation to Registry. Returns true to use with "var _ =".
-func Register(moduleName string, conversion Conversion) bool {
+func Register(moduleName string, conversion *Conversion) bool {
 	Registry().Add(moduleName, conversion)
 	return true
 }
 
 // RegisterFunc adds a function as a Conversion to Registry. Returns true to use with "var _ =".
-func RegisterFunc(moduleName string, srcVersion string, targetVersion string, conversionFunc ConversionFunc) bool {
-	Registry().Add(moduleName, NewAnonymousConversion(srcVersion, targetVersion, conversionFunc))
+func RegisterFunc(moduleName string, srcVersion int, targetVersion int, conversionFunc ConversionFunc) bool {
+	Registry().Add(moduleName, NewConversion(srcVersion, targetVersion, conversionFunc))
 	return true
 }
 
@@ -57,7 +59,7 @@ type ConvRegistry struct {
 	m sync.RWMutex
 }
 
-func (r *ConvRegistry) Add(moduleName string, conversion Conversion) {
+func (r *ConvRegistry) Add(moduleName string, conversion *Conversion) {
 	r.m.Lock()
 	defer r.m.Unlock()
 

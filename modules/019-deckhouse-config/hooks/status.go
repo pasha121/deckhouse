@@ -19,7 +19,13 @@ package hooks
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
+	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
+	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	"github.com/deckhouse/deckhouse/go_lib/operator"
+	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/019-deckhouse-config/hooks/internal"
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -28,13 +34,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
-
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/conversion"
-	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/019-deckhouse-config/hooks/internal"
 )
+
+/*
+This hook tracks changes in DeckhouseConfig resources and updates
+their statuses.
+It uses AddonOperator dependency to get enabled state for all modules
+and get access to each module state.
+
+DeckhouseConfig status consists of:
+- 'enabled' field - describes a module's enabled state:
+    * Enabled
+    * Disabled
+    * Disabled by script - module is disabled by 'enabled' script
+    * Enabled/Disabled by config - module state is determined by DeckhouseConfig
+- 'status' field - describes state of the module:
+    * Unknown module name - DeckhouseConfig resource name is not a known module name.
+    * Running - ModuleRun task is in progress: module starts or reloads.
+    * Ready - helm install for module was successful.
+    * HookError: ... - problem with module's hook.
+    * ModuleError: ... - problem during installing helm chart.
+*/
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/deckhouse-config/status",
@@ -57,7 +77,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Settings: &go_hook.HookConfigSettings{
 		EnableSchedulesOnStartup: true,
 	},
-}, dependency.WithExternalDependencies(updateDeckhouseConfigStatuses))
+}, updateDeckhouseConfigStatuses)
 
 // filterDeckhouseConfigNames returns names of DeckhouseConfig objects.
 func filterDeckhouseConfigsForStatus(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -84,13 +104,15 @@ const (
 	d8ConfigMetricName = "deckhouse_config_obsolete_version"
 )
 
-func updateDeckhouseConfigStatuses(input *go_hook.HookInput, dc dependency.Container) error {
-	knownModuleNames := set.New(dc.GetAddonOperator().ModuleManager.GetModuleNames()...)
+func updateDeckhouseConfigStatuses(input *go_hook.HookInput) error {
+	addonOperator := operator.Internals().AddonOperator()
+
+	knownModuleNames := set.New(addonOperator.GetModuleNames()...)
 
 	allConfigs := internal.ConfigsFromSnapshot(input.Snapshots["configs"])
 
 	for _, cfg := range allConfigs {
-		statusPatch := getConfigStatus(cfg, dc, knownModuleNames)
+		statusPatch := getConfigStatus(cfg, addonOperator, knownModuleNames)
 		input.LogEntry.Infof("Patch /status for %s: enabled=%s, status=%s", cfg.GetName(), statusPatch.Enabled, statusPatch.Status)
 		input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1", "DeckhouseConfig", "", cfg.GetName(), object_patch.WithSubresource("/status"))
 	}
@@ -111,8 +133,8 @@ func updateDeckhouseConfigStatuses(input *go_hook.HookInput, dc dependency.Conta
 		if cfgVersion != latestVersion {
 			input.MetricsCollector.Set(d8ConfigMetricName, 1.0, map[string]string{
 				"module":  modName,
-				"version": cfgVersion,
-				"latest":  latestVersion,
+				"version": strconv.Itoa(cfgVersion),
+				"latest":  strconv.Itoa(latestVersion),
 			}, metrics.WithGroup(d8ConfigGroup))
 		}
 	}
@@ -120,7 +142,7 @@ func updateDeckhouseConfigStatuses(input *go_hook.HookInput, dc dependency.Conta
 	return nil
 }
 
-func getConfigStatus(cfg *d8config_v1.DeckhouseConfig, dc dependency.Container, possibleNames set.Set) statusPatch {
+func getConfigStatus(cfg *d8config_v1.DeckhouseConfig, addonOperator *operator.AddonOperatorWrapper, possibleNames set.Set) statusPatch {
 	if cfg.GetName() == "global" {
 		return statusPatch{
 			Enabled: "Always On",
@@ -135,14 +157,14 @@ func getConfigStatus(cfg *d8config_v1.DeckhouseConfig, dc dependency.Container, 
 
 	sp := statusPatch{}
 
-	isEnabled := dc.GetAddonOperator().ModuleManager.IsModuleEnabled(cfg.GetName())
+	isEnabled := addonOperator.IsModuleEnabled(cfg.GetName())
 	if isEnabled {
 		sp.Enabled = "Enabled"
 	} else {
 		sp.Enabled = "Disabled"
 	}
 
-	mod := dc.GetAddonOperator().ModuleManager.GetModule(cfg.GetName())
+	mod := addonOperator.GetModule(cfg.GetName())
 
 	enabledByBundle := internal.MergeEnabled(mod.CommonStaticConfig.IsEnabled, mod.StaticConfig.IsEnabled)
 	enabledByConfig := cfg.Spec.Enabled != nil && *cfg.Spec.Enabled

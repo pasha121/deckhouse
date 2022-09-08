@@ -19,7 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
-
+	"github.com/deckhouse/deckhouse/go_lib/operator"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	"github.com/deckhouse/deckhouse/go_lib/deckhouse-config/modules"
 	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -55,11 +54,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 // - synchronize DeckhouseConfig objects content to intermediate
 //   ConfigMap/deckhouse-generated-config-do-not-edit.
 func migrateOrSyncModuleConfigs(input *go_hook.HookInput, dc dependency.Container) error {
-	err := modules.Registry().Init(modules.DefaultGlobalHooksDir, modules.DefaultModulesDir)
-	if err != nil {
-		return fmt.Errorf("initialize modules registry: %v", err)
-	}
-
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
@@ -106,7 +100,9 @@ func migrateOrSyncModuleConfigs(input *go_hook.HookInput, dc dependency.Containe
 }
 
 func migrateToModuleConfigs(input *go_hook.HookInput, kubeClient k8s.Client) error {
-	possibleNames := modules.Registry().GetPossibleNames()
+	addonOperator := operator.Internals().AddonOperator()
+	possibleNames := addonOperator.GetModuleNames()
+	possibleNames = append(possibleNames, "global")
 	// Migrate cm/deckhouse to DeckhouseConfig resources and a generated ConfigMap.
 	objs, err := d8config.MigrateConfigMapToModuleConfigs(kubeClient, possibleNames)
 	if err != nil {
@@ -126,34 +122,42 @@ func migrateToModuleConfigs(input *go_hook.HookInput, kubeClient k8s.Client) err
 	input.LogEntry.Infof("Create Config/%s", cm.Name)
 	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
 
-	// Patch deploy/deckhouse to use generated ConfigMap for config values.
-	switchDeckhouseToGeneratedConfigMap := func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	input.LogEntry.Infof("Update deploy/deckhouse to use Config/%s", cm.Name)
+	modifyDeckhouseDeploymentToUseGeneratedConfigMap(input.PatchCollector, cm.Name)
+	// Deckhouse restarts here.
+	return nil
+}
+
+// modifyDeckhouseDeploymentToUseGeneratedConfigMap patches container in deploy/deckhouse to use new generated ConfigMap for config values.
+func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_patch.PatchCollector, cmName string) {
+	modify := func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 		var depl appsv1.Deployment
 		err := sdk.FromUnstructured(u, &depl)
 		if err != nil {
 			return nil, err
 		}
 
-		envs := depl.Spec.Template.Spec.Containers[0].Env
-		newEnvs := make([]v1.EnvVar, 0)
-		for _, envVar := range envs {
-			if envVar.Name == "ADDON_OPERATOR_CONFIG_MAP" {
-				newEnvs = append(newEnvs, v1.EnvVar{
-					Name:  "ADDON_OPERATOR_CONFIG_MAP",
-					Value: cm.Name,
-				})
-			} else {
-				newEnvs = append(newEnvs, envVar)
+		for i, container := range depl.Spec.Template.Spec.Containers {
+			// Detect if container has ADDON_OPERATOR_CONFIG_MAP env
+			// to ignore possible non-deckhouse containers.
+			cmEnvIdx := -1
+			for i, envVar := range container.Env {
+				if envVar.Name == "ADDON_OPERATOR_CONFIG_MAP" {
+					cmEnvIdx = i
+				}
+			}
+
+			if cmEnvIdx > 0 {
+				depl.Spec.Template.Spec.Containers[i].Env[cmEnvIdx].Value = cmName
+				break
 			}
 		}
 
-		depl.Spec.Template.Spec.Containers[0].Env = newEnvs
 		return sdk.ToUnstructured(&depl)
 	}
-	input.LogEntry.Infof("Update deploy/deckhouse to use Config/%s", cm.Name)
-	input.PatchCollector.Filter(switchDeckhouseToGeneratedConfigMap, "apps/v1", "Deployment", d8config.DeckhouseNS, "deckhouse")
-	// Deckhouse restarts here.
-	return nil
+
+	patchCollector.Filter(modify, "apps/v1", "Deployment", d8config.DeckhouseNS, "deckhouse")
+	return
 }
 
 func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8config_v1.DeckhouseConfig) error {

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"github.com/deckhouse/deckhouse/go_lib/operator"
 	addon_operator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager"
 	"github.com/flant/addon-operator/pkg/utils"
@@ -24,7 +25,6 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/pointer"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -63,11 +63,12 @@ var _ = Describe("Modules :: deckhouse-config :: hooks :: update DeckhouseConfig
 			f.ValuesSetFromYaml(PossibleNamesPath, []byte(`["prometheus", "cert-manager"]`))
 			f.KubeStateSet(prometheusConfigYaml)
 
-			dependency.TestDC.AddonOperator = MockAddonOperator(map[string]*module_manager.Module{
+			addonOperator := MockAddonOperator(map[string]*module_manager.Module{
 				"prometheus": newMockedModule("prometheus", nil, nil),
 			}, map[string]struct{}{
 				"prometheus": {},
 			})
+			operator.Internals().WrapAddonOperator(addonOperator)
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()
@@ -86,9 +87,10 @@ var _ = Describe("Modules :: deckhouse-config :: hooks :: update DeckhouseConfig
 			f.ValuesSetFromYaml(PossibleNamesPath, []byte(`["prometheus", "cert-manager"]`))
 			f.KubeStateSet(enabledPrometheusConfigYaml)
 
-			dependency.TestDC.AddonOperator = MockAddonOperator(map[string]*module_manager.Module{
+			addonOperator := MockAddonOperator(map[string]*module_manager.Module{
 				"prometheus": newMockedModule("prometheus", pointer.Bool(true), nil),
 			}, map[string]struct{}{})
+			operator.Internals().WrapAddonOperator(addonOperator)
 
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/15 * * * * *"))
 			f.RunHook()

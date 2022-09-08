@@ -97,7 +97,7 @@ func main() {
 			}
 			operator.Start()
 
-			dependency.SetAddonOperator(operator)
+			dependency.Internals().SetAddonOperator(operator)
 
 			// Block action by waiting signals from OS.
 			utils_signal.WaitForProcessInterruption(func() {

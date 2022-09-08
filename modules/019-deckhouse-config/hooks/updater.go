@@ -33,6 +33,18 @@ import (
 	"github.com/deckhouse/deckhouse/modules/019-deckhouse-config/hooks/internal"
 )
 
+/**
+This hook tracks changes in DeckhouseConfig resources and
+updates ConfigMap accordingly.
+It also converts DeckhouseConfig's field configValues
+to the latest version and then validates values.
+
+Notes:
+- No way to ignore specific module configs. All known configs are considered as configuration source.
+- Deletion of DeckhouseConfig resource leads to immediate converge. But delete may be a part of
+  recreation. Logic to postpone deletion handling may be useful.
+*/
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/deckhouse-config/updater",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -94,8 +106,7 @@ func filterGeneratedConfigMap(unstructured *unstructured.Unstructured) (go_hook.
 	return configData(cm.Data), nil
 }
 
-// updateGeneratedConfigMap converts specs from ModuleSettings resources into ConfigMap data.
-// TODO add deletion threshold.
+// updateGeneratedConfigMap converts DeckhouseConfig resources into ConfigMap data.
 func updateGeneratedConfigMap(input *go_hook.HookInput) error {
 	namesSet, err := internal.SetFromArrayValue(input, PossibleNamesPath)
 	if err != nil {
@@ -103,9 +114,6 @@ func updateGeneratedConfigMap(input *go_hook.HookInput) error {
 	}
 
 	allConfigs := internal.KnownConfigsFromSnapshot(input.Snapshots["configs"], namesSet)
-
-	// TODO add logic to ignore specific module configs?
-	// TODO add logic to postpone deletion sections in ConfigMap?
 
 	for _, cfg := range allConfigs {
 		err := d8config.ValidateValues(cfg)

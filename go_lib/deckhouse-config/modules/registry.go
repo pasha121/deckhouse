@@ -25,6 +25,11 @@ import (
 	"github.com/flant/addon-operator/pkg/values/validation"
 )
 
+/*
+Registry to load all known modules. It is intended to use with
+an isolated webhook that convert and validate DeckhouseConfig.
+*/
+
 const DefaultModulesDir = "/deckhouse/modules"
 const DefaultGlobalHooksDir = "/deckhouse/global-hooks"
 
@@ -52,10 +57,6 @@ func Registry() ModulesRegistry {
 		instance = &modulesRegistry{}
 	})
 	return instance
-}
-
-func NewModulesRegistry() ModulesRegistry {
-	return &modulesRegistry{}
 }
 
 // Init searches for all modules in module directory and load

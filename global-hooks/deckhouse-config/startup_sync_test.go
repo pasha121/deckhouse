@@ -109,6 +109,21 @@ param1: val1
 		It("Should have param1 in global, deckhouse and cert-manager", func() {
 			Expect(registryErr).ShouldNot(HaveOccurred(), "modules registry should be inited")
 			Expect(f).To(ExecuteSuccessfully())
+
+			// Ensure ADDON_OPERATOR_CONFIG_MAP value is migrated.
+			depl := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
+			Expect(depl.Exists()).Should(BeTrue(), "should get deploy/deckhouse")
+			configMapName := ""
+			for _, container := range depl.Field("spec.template.spec.containers").Array() {
+				for _, env := range container.Get("env").Array() {
+					if env.Get("name").String() == "ADDON_OPERATOR_CONFIG_MAP" {
+						configMapName = env.Get("value").String()
+						break
+					}
+				}
+			}
+			Expect(configMapName).Should(Equal(d8config.GeneratedConfigMapName))
+
 			cfgObjs, err := f.KubeClient().Dynamic().Resource(d8config_v1.GroupVersionResource()).List(context.TODO(), metav1.ListOptions{})
 
 			cfgList := expectConfigItems(cfgObjs, err)
@@ -123,7 +138,7 @@ param1: val1
 	})
 })
 
-// TODO add more tests with modules in testdata.
+// TODO It'll be good to add more tests with modules in testdata directory.
 var _ = Describe("Global hooks :: deckhouse-config :: sync", func() {
 	f := HookExecutionConfigInit(`{"global": {"discovery": {}}}`, `{}`)
 	// Emulate ensure_crd hook.

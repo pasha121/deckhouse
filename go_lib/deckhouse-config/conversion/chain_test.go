@@ -22,11 +22,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func Test_conv_to_latest(t *testing.T) {
+func TestConvertConfigValuesToLatest(t *testing.T) {
 	g := NewWithT(t)
 
 	const modName = "test-mod"
-	RegisterFunc(modName, "v0.0.0", "v1.0.0", func(configValues map[string]interface{}) (map[string]interface{}, error) {
+	RegisterFunc(modName, 1, 2, func(configValues map[string]interface{}) (map[string]interface{}, error) {
 		configValues["param2"] = "val2"
 		return configValues, nil
 	})
@@ -36,9 +36,9 @@ func Test_conv_to_latest(t *testing.T) {
 	}
 	chain := Registry().Chain(modName)
 	g.Expect(chain).ShouldNot(BeNil())
-	newVer, newVals, err := chain.ConvertToLatest("v0.0.0", v0Vals)
+	newVer, newVals, err := chain.ConvertToLatest(1, v0Vals)
 	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(newVer).Should(Equal("v1.0.0"))
+	g.Expect(newVer).Should(Equal(2))
 	g.Expect(newVals).Should(HaveKey("param1"), "should keep old params")
 	g.Expect(newVals).Should(HaveKey("param2"), "should add new param")
 }

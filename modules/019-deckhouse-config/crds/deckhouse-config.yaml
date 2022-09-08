@@ -35,10 +35,10 @@ spec:
                   description: |
                     Enables or disables module.
                 configVersion:
-                  type: string
+                  type: number
                   description: |
                     Config values structure version for the module.
-                  example: 'v1.0.0'
+                  example: '1'
                 configValues:
                   type: object
                   description: |
@@ -57,7 +57,7 @@ spec:
         status: {}
       additionalPrinterColumns:
         - name: ConfigVersion
-          type: string
+          type: number
           description: "Module config structure version"
           jsonPath: .spec.configVersion
         - description: 'CreationTimestamp is a timestamp representing the server time

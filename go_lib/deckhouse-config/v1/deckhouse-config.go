@@ -39,7 +39,7 @@ type DeckhouseConfig struct {
 }
 
 type DeckhouseConfigSpec struct {
-	ConfigVersion string                 `json:"configVersion,omitempty"`
+	ConfigVersion int                    `json:"configVersion,omitempty"`
 	ConfigValues  map[string]interface{} `json:"configValues,omitempty"`
 	Enabled       *bool                  `json:"enabled,omitempty"`
 }

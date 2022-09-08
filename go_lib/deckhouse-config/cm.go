@@ -62,7 +62,7 @@ func GeneratedConfigMap(data map[string]string) *v1.ConfigMap {
 			Name:      GeneratedConfigMapName,
 			Namespace: DeckhouseNS,
 			Labels: map[string]string{
-				"owner": "deckhouse",
+				"heritage": "deckhouse",
 			},
 		},
 		Data: data,

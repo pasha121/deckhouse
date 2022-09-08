@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -73,7 +74,7 @@ func (c *DeckhouseConfigValidator) Validate(_ context.Context, review *kwhmodel.
 	}
 
 	// Reject objects without version.
-	if cfg.Spec.ConfigVersion == "" {
+	if cfg.Spec.ConfigVersion == 0 {
 		return rejectResult("spec.configVersion is required")
 	}
 
@@ -81,8 +82,8 @@ func (c *DeckhouseConfigValidator) Validate(_ context.Context, review *kwhmodel.
 	if review.Operation == kwhmodel.OperationCreate {
 		chain := conversion.Registry().Chain(cfg.GetName())
 		if chain != nil && !chain.HasVersion(cfg.Spec.ConfigVersion) {
-			supported := chain.VersionList()
-			return rejectResult(fmt.Sprintf("spec.configVersion has invalid value. Supported versions: %s", strings.Join(supported, ", ")))
+			supportedVersions := concatIntList(chain.VersionList())
+			return rejectResult(fmt.Sprintf("spec.configVersion has invalid value. Supported versions: %s", supportedVersions))
 		}
 	}
 
@@ -110,4 +111,15 @@ func rejectResult(msg string) (*kwhvalidating.ValidatorResult, error) {
 		Valid:   false,
 		Message: msg,
 	}, nil
+}
+
+func concatIntList(items []int) string {
+	var buf strings.Builder
+	for i, item := range items {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(strconv.Itoa(item))
+	}
+	return buf.String()
 }

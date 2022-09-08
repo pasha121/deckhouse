@@ -33,7 +33,7 @@ func ValidateValues(cfg *v1.DeckhouseConfig) error {
 	origVersion := cfg.Spec.ConfigVersion
 
 	// Run registered conversions.
-	convertedMsg := ""
+	versionMsg := fmt.Sprintf("version %d", origVersion)
 	chain := conversion.Registry().Chain(cfg.GetName())
 	if chain != nil {
 		newVersion, newValues, err := chain.ConvertToLatest(cfg.Spec.ConfigVersion, cfg.Spec.ConfigValues)
@@ -42,12 +42,12 @@ func ValidateValues(cfg *v1.DeckhouseConfig) error {
 		}
 		cfg.Spec.ConfigVersion = newVersion
 		cfg.Spec.ConfigValues = newValues
-		convertedMsg = fmt.Sprintf(" converted to %s", newVersion)
+		versionMsg = fmt.Sprintf("version %d converted to %d", origVersion, newVersion)
 	}
 
 	err := modules.Registry().ValidateConfigValues(cfg.GetName(), cfg.Spec.ConfigValues)
 	if err != nil {
-		return fmt.Errorf("%s config values of version %s%s are not valid: %v", cfg.GetName(), origVersion, convertedMsg, err)
+		return fmt.Errorf("%s config values of version %s are not valid: %v", cfg.GetName(), versionMsg, err)
 	}
 
 	return nil

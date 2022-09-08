@@ -29,7 +29,7 @@ import (
 
 // MigrateConfigMapToModuleConfigs return DeckhouseConfig object for global section
 // and for each module specified in ConfigMap/deckhouse.
-// It sets config version to v0.0.0 and config values to values from ConfigMap/deckhouse.
+// It sets configVersion to 1 and configValues to values from ConfigMap/deckhouse.
 func MigrateConfigMapToModuleConfigs(kubeClient k8s.Client, possibleNames []string) ([]*d8config_v1.DeckhouseConfig, error) {
 	// Split ConfigMap/deckhouse to ModuleSettings resources.
 	deckhouseCm, err := GetDeckhouseConfigMap(kubeClient)

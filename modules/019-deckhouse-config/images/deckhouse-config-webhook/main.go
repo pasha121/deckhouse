@@ -55,7 +55,6 @@ func initFlags() *config {
 func main() {
 	cfg := initFlags()
 
-	//log.SetOutput(os.Stdout)
 	log.SetFormatter(&log.JSONFormatter{})
 	logLevel := log.InfoLevel
 	if cfg.debug {

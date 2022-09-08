@@ -71,7 +71,7 @@ func GlobalKubeConfigToDeckhouseConfig(kubeConfig *kcm.GlobalKubeConfig) (*d8con
 }
 
 func kubeConfigToDeckhouseConfig(name string, valuesKey string, values utils.Values, isEnabled *bool) (*d8config_v1.DeckhouseConfig, error) {
-	modConfig := DeckhouseConfigV0(name)
+	modConfig := InitialDeckhouseConfig(name)
 
 	// Fill the 'enabled' field.
 	modConfig.Spec.Enabled = isEnabled
@@ -104,7 +104,9 @@ func kubeConfigToDeckhouseConfig(name string, valuesKey string, values utils.Val
 	return modConfig, nil
 }
 
-func DeckhouseConfigCR(name string) *d8config_v1.DeckhouseConfig {
+// InitialDeckhouseConfig returns DeckhouseConfig with version 1 for "initial values"
+// that already in ConfigMap/deckhouse.
+func InitialDeckhouseConfig(name string) *d8config_v1.DeckhouseConfig {
 	return &d8config_v1.DeckhouseConfig{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DeckhouseConfig",
@@ -114,23 +116,7 @@ func DeckhouseConfigCR(name string) *d8config_v1.DeckhouseConfig {
 			Name: name,
 		},
 		Spec: d8config_v1.DeckhouseConfigSpec{
-			ConfigVersion: "v1.0.0",
-		},
-	}
-}
-
-// DeckhouseConfigV0 returns DeckhouseConfig for values from cm/deckhouse.
-func DeckhouseConfigV0(name string) *d8config_v1.DeckhouseConfig {
-	return &d8config_v1.DeckhouseConfig{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "DeckhouseConfig",
-			APIVersion: "deckhouse.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: d8config_v1.DeckhouseConfigSpec{
-			ConfigVersion: "v0.0.0",
+			ConfigVersion: 1,
 		},
 	}
 }
