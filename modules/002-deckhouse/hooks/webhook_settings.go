@@ -23,6 +23,12 @@ import (
 	"github.com/flant/addon-operator/sdk"
 )
 
+/*
+This hook saves ADDON_OPERATOR_CONFIG_MAP env to values.
+This is a workaround as Helm templates have no
+access to environment variables.
+*/
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 5},
 }, webhookSettings)

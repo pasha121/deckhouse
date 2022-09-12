@@ -2,7 +2,13 @@ type: object
 properties:
   locations:
     description: |
-      Если нам необходимо создать несколько location'ов для разных приложений с разной авторизацией, то добавляем данный параметр.
+      Список location'ов для разных приложений с разной авторизацией. Если параметр не указан, то добавляется `/` с автогенерированным паролем.
+
+      Сгенерированный список location'ов можно получить командой:
+
+      ```shell
+      kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values basic-auth -o json | jq '.basicAuth.internal.locations'
+      ```
     items:
       properties:
         location:

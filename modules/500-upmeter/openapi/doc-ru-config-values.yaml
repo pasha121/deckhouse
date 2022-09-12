@@ -16,7 +16,9 @@ properties:
         properties:
           externalAuthentication:
             description: |
-              Параметры для подключения внешней аутентификации. Используется механизм Nginx Ingress external-auth, работающей на основе модуля Nginx auth_request.
+              Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+
+              > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/).
             properties:
               authURL:
                 description: |
@@ -26,9 +28,15 @@ properties:
                   URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
           password:
             description: |
-              Пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
+              Пароль для HTTP-авторизации пользователя `admin`. Пароль генерируется автоматически, если не указан.
 
-              Используется, если не включен параметр `externalAuthentication`.
+              Сгенерированный пароль можно получить командой:
+
+              ```shell
+              kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
+              ```
+
+              Пароль используется, если внешняя аутентификация не включена (см. параметр `externalAuthentication`).
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.
@@ -44,7 +52,9 @@ properties:
         properties:
           externalAuthentication:
             description: |
-              Параметры для подключения внешней аутентификации. Используется механизм Nginx Ingress external-auth, работающей на основе модуля Nginx auth_request.
+              Параметры для подключения внешней аутентификации (используется механизм Nginx Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля Nginx [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+
+              > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/en/documentation/v1/modules/150-user-authn/).
             properties:
               authURL:
                 description: |
@@ -54,9 +64,15 @@ properties:
                   URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
           password:
             description: |
-              Пароль для http-авторизации для пользователя `admin` (генерируется автоматически, но можно менять)
+              Пароль для HTTP-авторизации пользователя `admin`. Пароль генерируется автоматически, если не указан.
 
-              Используется, если не включен параметр `externalAuthentication`.
+              Сгенерированный пароль можно получить командой:
+
+              ```shell
+              kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
+              ```
+
+              Пароль используется, если внешняя аутентификация не включена (см. параметр `externalAuthentication`).
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.
