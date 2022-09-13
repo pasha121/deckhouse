@@ -54,18 +54,6 @@ var _ = Describe("Modules :: basic-auth :: hooks :: generate_password", func() {
 				Expect(f.ValuesGet(passwordKey).String()).Should(BeEquivalentTo("secret"))
 			})
 		})
-		Context("with locations already in values", func() {
-			BeforeEach(func() {
-				f.KubeStateSet("")
-				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-				f.ValuesSetFromYaml(locationsInternalKey, []byte(`[{"location": "/", "users": {"admin": "secret"}}]`))
-				f.RunHook()
-			})
-			It("should get existing password", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet(passwordKey).String()).Should(BeEquivalentTo("secret"))
-			})
-		})
 	})
 
 	Context("with existing secret", func() {
@@ -83,17 +71,23 @@ data:
   htpasswd: |
     ` + adminPasswdB64
 
+		customLocation := `
+  # user:{PLAIN}password
+  custom_location: |
+    dXNlcjp7UExBSU59cGFzc3dvcmQK
+`
+
 		Context("without locations", func() {
 			BeforeEach(func() {
 				f.KubeStateSet(htpasswdSecret)
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.RunHook()
 			})
-			It("should restore generated password", func() {
+			It("should restore password from secret", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.ValuesGet(passwordKey).String()).Should(SatisfyAll(
 					Not(BeEmpty()),
-					HaveLen(generatedPasswdLength),
+					Equal(generatedPasswd),
 				))
 			})
 		})
@@ -109,16 +103,19 @@ data:
 				Expect(f.ValuesGet(passwordKey).String()).Should(BeEquivalentTo("secret"))
 			})
 		})
-		Context("with locations already in values", func() {
+		Context("no config values, custom locations in Secret", func() {
 			BeforeEach(func() {
-				f.KubeStateSet(htpasswdSecret)
+				f.KubeStateSet(htpasswdSecret + customLocation)
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-				f.ValuesSetFromYaml(locationsInternalKey, []byte(`[{"location": "/", "users": {"admin": "secret"}}]`))
 				f.RunHook()
 			})
-			It("should not set password from secret", func() {
+			It("should generate default location", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet(passwordKey).String()).Should(BeEquivalentTo("secret"))
+				Expect(f.ValuesGet(passwordKey).String()).Should(SatisfyAll(
+					Not(BeEmpty()),
+					Not(Equal(generatedPasswd)),
+					HaveLen(generatedPasswdLength),
+				))
 			})
 		})
 	})

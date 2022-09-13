@@ -7,7 +7,7 @@ package hooks
 
 import (
 	"fmt"
-	"regexp"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -60,7 +60,7 @@ func filterHtpasswdSecret(obj *unstructured.Unstructured) (go_hook.FilterResult,
 		return nil, fmt.Errorf("cannot convert secret to struct: %v", err)
 	}
 
-	return string(secret.Data["htpasswd"]), nil
+	return secret.Data, nil
 }
 
 const defaultUserName = `admin`
@@ -76,11 +76,6 @@ func defaultLocationValues(passwd string) []map[string]interface{} {
 	}
 }
 
-// Regex to get password from basic auth plain format.
-// Format is: username:{PLAIN}password
-// htpasswd field contains several passwords, so use m flag for multi-line mode.
-var defaultPasswordRe = regexp.MustCompile(`(?m)^\s*` + defaultUserName + `:{PLAIN}(\S+)$`)
-
 func generatePassword(input *go_hook.HookInput) error {
 	// Set values from user controlled configuration.
 	userLocations, ok := input.ConfigValues.GetOk(locationsKey)
@@ -89,33 +84,68 @@ func generatePassword(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	_, ok = input.Values.GetOk(locationsInternalKey)
-	if ok {
-		// No config values, but internal values are set. It's OK, just return.
-		return nil
+	// No config values. Try to restore generated password from the Secret.
+	// Generate default location if no valid generated password available.
+
+	pass, err := restorePasswordFromSnapshot(input.Snapshots[secretBinding])
+	if err != nil {
+		input.LogEntry.Infof("Generate default location for basic auth: %s", err)
+		pass = pwgen.AlphaNum(generatedPasswdLength)
 	}
 
-	// No values, no secret. Module is enabled for the first time, so
-	// generate a new password and prepare a default location.
-	if len(input.Snapshots[secretBinding]) == 0 {
-		locations := defaultLocationValues(pwgen.AlphaNum(generatedPasswdLength))
-		input.Values.Set(locationsInternalKey, locations)
-		return nil
-	}
-
-	// No values, but Secret is present. This can occur when module is enabled
-	// and Deckhouse is restarted later. Restore generated password from the Secret
-	// assuming it is in the first line of htpasswd field.
-	// NOTE: This algorithm is coupled with the field name in secret.yaml and "users" template in _helpers.tpl.
-	htpasswdField := input.Snapshots[secretBinding][0].(string)
-	matches := defaultPasswordRe.FindStringSubmatch(htpasswdField)
-	// matches[0] is a full string
-	// matches[1] is a password
-	if len(matches) != 2 || len(matches[1]) != generatedPasswdLength {
-		return fmt.Errorf("expect secret/%s contains generated credentials in basic auth plain format (remove Secret to generate new credentials)", secretName)
-	}
-
-	locations := defaultLocationValues(matches[1])
+	locations := defaultLocationValues(pass)
 	input.Values.Set(locationsInternalKey, locations)
 	return nil
+}
+
+// restorePasswordFromSnapshot returns generate password from Secret.
+// password is considered generated if:
+// - there is only 1 snapshot
+// - there is only htpasswd field in Secret
+// - there is only one line contains "admin:{PLAIN}" in htpasswd
+// Hook should generate new default location if Secret
+// contains more fields or passwords.
+//
+// NOTE: This algorithm is coupled with the field name in secret.yaml and "users" template in _helpers.tpl.
+func restorePasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error) {
+	// Only one Secret is expected.
+	if len(snapshot) != 1 {
+		return "", fmt.Errorf("no Secret")
+	}
+
+	secretData, ok := snapshot[0].(map[string][]byte)
+	if !ok {
+		return "", fmt.Errorf("secret has empty data")
+	}
+	// Only one field is expected.
+	if len(secretData) != 1 {
+		return "", fmt.Errorf("secret has many fields")
+	}
+
+	// Expect htpasswd field is present.
+	htpasswdBytes, ok := secretData["htpasswd"]
+	if !ok {
+		return "", fmt.Errorf("secret has no htpasswd field")
+	}
+	htpasswd := string(htpasswdBytes)
+
+	// Expect only one user-password pair.
+	if strings.Count(htpasswd, "{PLAIN}") != 1 {
+		return "", fmt.Errorf("secret has many users in htpasswd field")
+	}
+
+	userPrefix := defaultUserName + ":{PLAIN}"
+	if strings.Count(htpasswd, userPrefix) != 1 {
+		return "", fmt.Errorf("secret has no password for %s user", defaultUserName)
+	}
+
+	// Extract password.
+	cleaned := strings.TrimSpace(htpasswd)
+	pass := strings.TrimPrefix(cleaned, defaultUserName+":{PLAIN}")
+
+	// Expect password length is sufficient.
+	if len(pass) < generatedPasswdLength {
+		return "", fmt.Errorf("password length is too low for user %s", defaultUserName)
+	}
+	return pass, nil
 }
