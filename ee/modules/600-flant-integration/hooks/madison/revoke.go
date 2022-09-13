@@ -113,6 +113,7 @@ func revokeHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		input.PatchCollector.Create(cm, object_patch.IgnoreIfExists())
 
 		// Remove internal values.
+		// No more telemetry right after project become archived.
 		input.Values.Remove(internalMadisonKeyPath)
 		input.Values.Remove(internalLicenseKeyPath)
 	}

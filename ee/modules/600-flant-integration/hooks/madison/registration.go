@@ -134,13 +134,12 @@ func registrationHandler(input *go_hook.HookInput, dc dependency.Container) erro
 	}
 
 	// No auth key set in configuration, no auth key stored in the Secret — register in madison.
-	var (
-		domainTemplate      = input.Values.Get("global.modules.publicDomainTemplate").String()
-		globalHTTPSMode     = input.Values.Get("global.modules.https.mode").String()
-		prometheusHTTPSMode = getPrometheusHTTPSMode(input)
-	)
+	domainTemplate := input.Values.Get("global.modules.publicDomainTemplate").String()
+	prometheusHTTPSMode := getPrometheusHTTPSMode(input)
 
-	payload := createMadisonPayload(domainTemplate, getPrometheusURLSchema(prometheusHTTPSMode, globalHTTPSMode))
+	// Create payload for Madison with Prometheus and Grafana URLs.
+	// Use https mode calculated in 300-prometheus module.
+	payload := createMadisonPayload(domainTemplate, prometheusHTTPSMode)
 
 	// Create http request to d8-connect proxy.
 	req, err := newRegistrationRequest(registrationURL, payload, licenseKey.String())
@@ -191,19 +190,6 @@ func createMadisonPayload(domainTemplate string, schema string) madisonRequestDa
 	data.Type = "prometheus"
 
 	return data
-}
-
-// getPrometheusURLSchema calculate https mode from prometheus module configuration and global settings.
-func getPrometheusURLSchema(globalHTTPSMode string, prometheusHTTPSMode string) string {
-	schema := "http"
-	if prometheusHTTPSMode == "" {
-		if globalHTTPSMode != "Disabled" {
-			schema = "https"
-		}
-	} else if prometheusHTTPSMode != "Disabled" {
-		schema = "https"
-	}
-	return schema
 }
 
 // getPrometheusHTTPSMode returns https mode from Secret.
