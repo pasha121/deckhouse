@@ -54,6 +54,9 @@ internal:
     tls.crt: CRTCRTCRT
     tls.key: KEYKEYKEY
   auth: {}
+# defaults from config-values.yaml
+auth: {}
+accessLevel: User
 `
 	f := SetupHelmConfig(``)
 

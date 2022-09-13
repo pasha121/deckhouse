@@ -86,7 +86,7 @@ properties:
     properties:
       auth:
         description: |
-          Натсройки доступа к web-интерфейсу.
+          Настройки доступа к web-интерфейсу.
         properties:
           externalAuthentication:
             description: |
