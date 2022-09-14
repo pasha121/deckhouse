@@ -1,11 +1,11 @@
 diff --git a/pkg/virt-config/feature-gates.go b/pkg/virt-config/feature-gates.go
-index c437e0db2fe..9717a8521fb 100644
+index c905dbf0f1b..e7d7872a5e3 100644
 --- a/pkg/virt-config/feature-gates.go
 +++ b/pkg/virt-config/feature-gates.go
 @@ -30,24 +30,26 @@ const (
  	IgnitionGate      = "ExperimentalIgnitionSupport"
  	LiveMigrationGate = "LiveMigration"
- 	// SRIOVLiveMigrationGate enable's Live Migration for VM's with SRIOV interfaces.
+ 	// SRIOVLiveMigrationGate enables Live Migration for VM's with network SR-IOV interfaces.
 -	SRIOVLiveMigrationGate     = "SRIOVLiveMigration"
 -	CPUNodeDiscoveryGate       = "CPUNodeDiscovery"
 -	HypervStrictCheckGate      = "HypervStrictCheck"
@@ -47,7 +47,7 @@ index c437e0db2fe..9717a8521fb 100644
  )
  
  var deprecatedFeatureGates = [...]string{
-@@ -107,6 +109,10 @@ func (config *ClusterConfig) SRIOVLiveMigrationEnabled() bool {
+@@ -108,6 +110,10 @@ func (config *ClusterConfig) SRIOVLiveMigrationEnabled() bool {
  	return config.isFeatureGateEnabled(SRIOVLiveMigrationGate)
  }
  
@@ -59,10 +59,10 @@ index c437e0db2fe..9717a8521fb 100644
  	return config.isFeatureGateEnabled(HypervStrictCheckGate)
  }
 diff --git a/pkg/virt-handler/vm.go b/pkg/virt-handler/vm.go
-index 041b2e7700f..57be710d9a0 100644
+index 4867c91a4b6..a4ea4e5177d 100644
 --- a/pkg/virt-handler/vm.go
 +++ b/pkg/virt-handler/vm.go
-@@ -2230,8 +2230,9 @@ func (d *VirtualMachineController) checkNetworkInterfacesForMigration(vmi *v1.Vi
+@@ -2239,8 +2239,9 @@ func (d *VirtualMachineController) checkNetworkInterfacesForMigration(vmi *v1.Vi
  		return nil
  	}
  
@@ -73,9 +73,9 @@ index 041b2e7700f..57be710d9a0 100644
 +		return fmt.Errorf("NetworkAwareLiveMigration feature-gate is closed, cannot migrate VMI which does not use masquerade to connect to the pod network")
  	}
  
- 	sriovLiveMigrationEnabled := d.clusterConfig.SRIOVLiveMigrationEnabled()
+ 	return nil
 diff --git a/pkg/virt-handler/vm_test.go b/pkg/virt-handler/vm_test.go
-index 8f0106f6d2e..1cf3f3fbfaf 100644
+index e6ab6f7b15f..5c7b9093681 100644
 --- a/pkg/virt-handler/vm_test.go
 +++ b/pkg/virt-handler/vm_test.go
 @@ -2414,7 +2414,7 @@ var _ = Describe("VirtualMachineInstance", func() {
@@ -96,14 +96,14 @@ index 8f0106f6d2e..1cf3f3fbfaf 100644
  				vmi := api2.NewMinimalVMI("testvmi")
  				interface_name := "interface_name"
  
-@@ -2515,6 +2515,36 @@ var _ = Describe("VirtualMachineInstance", func() {
+@@ -2515,7 +2515,36 @@ var _ = Describe("VirtualMachineInstance", func() {
  				err := controller.checkNetworkInterfacesForMigration(vmi)
  				Expect(err).To(HaveOccurred())
  			})
 +			It("should not block migration for bridge binding assigned to the pod network when feature-gate NetworkAwareLiveMigration is on", func() {
 +				vmi := api2.NewMinimalVMI("testvmi")
 +				interface_name := "interface_name"
-+
+ 
 +				vmi.Spec.Networks = []v1.Network{
 +					{
 +						Name:          interface_name,
@@ -130,9 +130,9 @@ index 8f0106f6d2e..1cf3f3fbfaf 100644
 +				err := controller.checkNetworkInterfacesForMigration(vmi)
 +				Expect(err).ToNot(HaveOccurred())
 +			})
- 			It("should block migration for VMI with SRIOV interface when feature-gate SRIOVLiveMigration is off", func() {
+ 			It("should not block migration for masquerade binding assigned to the pod network", func() {
  				vmi := api2.NewMinimalVMI("testvmi")
- 				sriovInterfaceName := "sriovnet1"
+ 				interface_name := "interface_name"
 diff --git a/pkg/virt-launcher/virtwrap/BUILD.bazel b/pkg/virt-launcher/virtwrap/BUILD.bazel
 index 0585ff85cff..47910da1b1e 100644
 --- a/pkg/virt-launcher/virtwrap/BUILD.bazel
@@ -159,7 +159,7 @@ index d8c2169cf2c..638fac7e772 100644
  		in, out := &in.Address, &out.Address
  		*out = new(Address)
 diff --git a/pkg/virt-launcher/virtwrap/api/schema.go b/pkg/virt-launcher/virtwrap/api/schema.go
-index 74405fab105..d1bac46817f 100644
+index 7bf7108ffc6..52bef3a91a6 100644
 --- a/pkg/virt-launcher/virtwrap/api/schema.go
 +++ b/pkg/virt-launcher/virtwrap/api/schema.go
 @@ -716,6 +716,7 @@ type ConsoleSource struct {
@@ -707,7 +707,7 @@ index b0ac28d51a1..16a5246405f 100644
 +	return cache.NewCustomCache(filePath, kfs.NewWithRootPath(c.tmpDir))
 +}
 diff --git a/tests/migration_test.go b/tests/migration_test.go
-index 3864c9013eb..5ed154dcbc8 100644
+index 74ca40303f7..ba0e943b69b 100644
 --- a/tests/migration_test.go
 +++ b/tests/migration_test.go
 @@ -60,11 +60,13 @@ import (
@@ -724,7 +724,7 @@ index 3864c9013eb..5ed154dcbc8 100644
  	"k8s.io/utils/pointer"
  
  	"kubevirt.io/kubevirt/tests/libvmi"
-@@ -674,7 +676,7 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
+@@ -675,7 +677,7 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
  			tests.WaitForVirtualMachineToDisappearWithTimeout(vmi, 120)
  		}
  
@@ -733,7 +733,7 @@ index 3864c9013eb..5ed154dcbc8 100644
  			It("[test_id:3226]should reject a migration of a vmi with a bridge interface", func() {
  				vmi := tests.NewRandomVMIWithEphemeralDisk(cd.ContainerDiskFor(cd.ContainerDiskAlpine))
  				vmi.Spec.Domain.Devices.Interfaces = []v1.Interface{
-@@ -718,6 +720,103 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
+@@ -719,6 +721,103 @@ var _ = Describe("[rfe_id:393][crit:high][vendor:cnv-qe@redhat.com][level:system
  				tests.WaitForVirtualMachineToDisappearWithTimeout(vmi, 120)
  			})
  		})
