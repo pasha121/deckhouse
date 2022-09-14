@@ -187,17 +187,4 @@ data:
 			),
 		)
 	})
-
-	Context("calculatePrometheusURLSchema", func() {
-		table.DescribeTable("calculation of promentheus URL schema from values",
-			func(globalMode, promMode, want string) {
-				schema := getPrometheusURLSchema(globalMode, promMode)
-				Expect(schema).To(Equal(want))
-			},
-			table.Entry("empty inputs", "", "", "https"),
-			table.Entry("globally disabled", "Disabled", "", "http"),
-			table.Entry("disabled for prom", "", "Disabled", "http"),
-			table.Entry("both disabled", "Disabled", "Disabled", "http"),
-		)
-	})
 })
