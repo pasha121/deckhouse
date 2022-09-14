@@ -1,4 +1,7 @@
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- define "vmi_router_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -13,29 +16,22 @@ spec:
     name: vmi-router
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: vmi-router
+      minAllowed:
+        {{- include "vmi_router_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
+        memory: 25Mi
 {{- end }}
----
-apiVersion: policy/v1beta1
-kind: PodDisruptionBudget
-metadata:
-  annotations:
-    helm.sh/hook: post-upgrade, post-install
-    helm.sh/hook-delete-policy: before-hook-creation
-  name: vmi-router
-  namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "vmi-router" )) | nindent 2 }}
-spec:
-  {{- include "helm_lib_pdb_daemonset" . | nindent 2}}
-  selector:
-    matchLabels:
-      app: vmi-router
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: vmi-router
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "vmi-router" )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   selector:
     matchLabels:
@@ -52,13 +48,14 @@ spec:
         - name: deckhouse-registry
       serviceAccountName: vmi-router
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: vmi-router
           args:
           - --db=/var/lib/kubevirt/vmi-router/routes.db
           - --cidr=10.10.10.0/24
           {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
-          image: {{ $.Values.global.modulesImages.registry }}:{{ $.Values.global.modulesImages.tags.kubevirt.vmiRouter }}
+          image: {{ include "helm_lib_module_image" (list . "vmiRouter") }}
           imagePullPolicy: "IfNotPresent"
           env:
             - name: NODE_NAME
@@ -71,6 +68,9 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "vmi_router_resources" . | nindent 14 }}
+              {{- end }}
       volumes:
         - name: data
           hostPath:
