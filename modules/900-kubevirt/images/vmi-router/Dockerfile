@@ -1,5 +1,7 @@
+ARG BASE_DEBIAN_BULLSEYE
+ARG BASE_GOLANG_18_BULLSEYE
 # Build the manager binary
-FROM golang:1.18 as builder
+FROM $BASE_GOLANG_18_BULLSEYE as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -17,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o vmi-router main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM $BASE_DEBIAN_BULLSEYE
 WORKDIR /
 COPY --from=builder /workspace/vmi-router .
 USER 65532:65532

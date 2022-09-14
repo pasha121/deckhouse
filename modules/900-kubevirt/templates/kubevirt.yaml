@@ -13,6 +13,8 @@ spec:
       - LiveMigration
       - Macvtap
       - HostDisk
+      - GPU
+      - NetworkAwareLiveMigration
   customizeComponents:
     patches:
     - resourceType: Deployment
@@ -27,8 +29,21 @@ spec:
       resourceName: virt-handler
       patch: '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"deckhouse-registry"}]}}}}'
       type: strategic
+    {{- if ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+    - resourceType: Deployment
+      resourceName: virt-api
+      patch: '[{"op":"remove","path":"/spec/template/spec/containers/0/resources/requests"}]'
+      type: json
+    - resourceType: Deployment
+      resourceName: virt-controller
+      patch: '[{"op":"remove","path":"/spec/template/spec/containers/0/resources/requests"}]'
+      type: json
+    - resourceType: DaemonSet
+      resourceName: virt-handler
+      patch: '[{"op":"remove","path":"/spec/template/spec/containers/0/resources/requests"}]'
+      type: json
+    {{- end }}
   imagePullPolicy: IfNotPresent
   infra:
     replicas: 1
   workloadUpdateStrategy: {}
-  imagePullPolicy: IfNotPresent

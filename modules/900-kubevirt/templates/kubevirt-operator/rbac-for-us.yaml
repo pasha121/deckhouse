@@ -1,24 +1,4 @@
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: kubevirt.io:operator
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-rules:
-  - apiGroups:
-      - kubevirt.io
-    resources:
-      - kubevirts
-    verbs:
-      - get
-      - delete
-      - create
-      - update
-      - patch
-      - list
-      - watch
-      - deletecollection
----
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -79,7 +59,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-  name: kubevirt-operator-rolebinding
+  name: kubevirt-operator
   namespace: d8-kubevirt
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -94,7 +74,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-  name: kubevirt-operator
+  name: d8:kubevirt:kubevirt-operator
 rules:
 - apiGroups:
   - kubevirt.io
@@ -1052,11 +1032,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-  name: kubevirt-operator
+  name: d8:kubevirt:kubevirt-operator
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: kubevirt-operator
+  name: d8:kubevirt:kubevirt-operator
 subjects:
 - kind: ServiceAccount
   name: kubevirt-operator

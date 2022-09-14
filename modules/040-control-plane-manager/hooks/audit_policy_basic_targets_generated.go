@@ -2,6 +2,7 @@
 package hooks
 
 var auditPolicyBasicNamespaces = []string{
+	"d8-cdi",
 	"d8-ceph-csi",
 	"d8-cert-manager",
 	"d8-chrony",
@@ -45,7 +46,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"alliance-metadata-exporter",
 	"annotations-converter",
 	"cainjector",
-	"cdi-operator",
 	"cert-exporter",
 	"cert-manager",
 	"cloud-controller-manager",
