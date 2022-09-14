@@ -1,3 +1,4 @@
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -42,3 +43,4 @@ roleRef:
   kind: ClusterRole
   name: d8:{{ .Chart.Name }}:vmi-router
   apiGroup: rbac.authorization.k8s.io
+{{- end }}
