@@ -1,5 +1,5 @@
 diff --git a/cmd/virt-chroot/main.go b/cmd/virt-chroot/main.go
-index e28daa07c78..ce57e038150 100644
+index e28daa07c78c..ce57e0381502 100644
 --- a/cmd/virt-chroot/main.go
 +++ b/cmd/virt-chroot/main.go
 @@ -218,6 +218,7 @@ func main() {
@@ -11,7 +11,7 @@ index e28daa07c78..ce57e038150 100644
  
  	createMDEVCmd := NewCreateMDEVCommand()
 diff --git a/cmd/virt-chroot/tap-device-maker.go b/cmd/virt-chroot/tap-device-maker.go
-index 4f39328c930..30f2101f2b5 100644
+index 4f39328c930c..30f2101f2b56 100644
 --- a/cmd/virt-chroot/tap-device-maker.go
 +++ b/cmd/virt-chroot/tap-device-maker.go
 @@ -2,8 +2,12 @@ package main
@@ -179,7 +179,7 @@ index 4f39328c930..30f2101f2b5 100644
  	}
  }
 diff --git a/pkg/network/domainspec/generators.go b/pkg/network/domainspec/generators.go
-index bf51be780b1..75d73457a71 100644
+index bf51be780b1f..75d73457a71b 100644
 --- a/pkg/network/domainspec/generators.go
 +++ b/pkg/network/domainspec/generators.go
 @@ -50,14 +50,16 @@ type LibvirtSpecGenerator interface {
@@ -262,7 +262,7 @@ index bf51be780b1..75d73457a71 100644
  
  type PasstLibvirtSpecGenerator struct {
 diff --git a/pkg/network/domainspec/generators_test.go b/pkg/network/domainspec/generators_test.go
-index 204ba0d1d52..71164e6d206 100644
+index 57e577b6f185..57a9186e122c 100644
 --- a/pkg/network/domainspec/generators_test.go
 +++ b/pkg/network/domainspec/generators_test.go
 @@ -132,7 +132,7 @@ var _ = Describe("Pod Network", func() {
@@ -275,7 +275,7 @@ index 204ba0d1d52..71164e6d206 100644
  
  			It("Should pass a non-privileged macvtap interface to qemu", func() {
 diff --git a/pkg/network/driver/BUILD.bazel b/pkg/network/driver/BUILD.bazel
-index bcd2cabb455..58043cff649 100644
+index bcd2cabb4558..58043cff6492 100644
 --- a/pkg/network/driver/BUILD.bazel
 +++ b/pkg/network/driver/BUILD.bazel
 @@ -15,12 +15,15 @@ go_library(
@@ -295,7 +295,7 @@ index bcd2cabb455..58043cff649 100644
          "//vendor/k8s.io/utils/net:go_default_library",
      ],
 diff --git a/pkg/network/driver/common.go b/pkg/network/driver/common.go
-index 693524fbef8..7953c6a767c 100644
+index 5e0cf08cea33..0b4d4208be42 100644
 --- a/pkg/network/driver/common.go
 +++ b/pkg/network/driver/common.go
 @@ -26,8 +26,12 @@ import (
@@ -319,7 +319,7 @@ index 693524fbef8..7953c6a767c 100644
  	"kubevirt.io/kubevirt/pkg/virt-handler/selinux"
  )
  
-@@ -85,6 +90,7 @@ type NetworkHandler interface {
+@@ -87,6 +92,7 @@ type NetworkHandler interface {
  	GetNFTIPString(proto iptables.Protocol) string
  	CreateTapDevice(tapName string, queueNumber uint32, launcherPID int, mtu int, tapOwner string) error
  	BindTapDeviceToBridge(tapName string, bridgeName string) error
@@ -327,7 +327,7 @@ index 693524fbef8..7953c6a767c 100644
  	DisableTXOffloadChecksum(ifaceName string) error
  }
  
-@@ -397,6 +403,101 @@ func buildTapDeviceMaker(tapName string, queueNumber uint32, virtLauncherPID int
+@@ -405,6 +411,101 @@ func buildTapDeviceMaker(tapName string, queueNumber uint32, virtLauncherPID int
  	return selinux.NewContextExecutor(virtLauncherPID, cmd)
  }
  
@@ -430,10 +430,10 @@ index 693524fbef8..7953c6a767c 100644
  	tap, err := netlink.LinkByName(tapName)
  	log.Log.V(4).Infof("Looking for tap device: %s", tapName)
 diff --git a/pkg/network/driver/generated_mock_common.go b/pkg/network/driver/generated_mock_common.go
-index 2bb7a41c4f3..b1ba262e94b 100644
+index 44a01b1ae43a..a0398627cb09 100644
 --- a/pkg/network/driver/generated_mock_common.go
 +++ b/pkg/network/driver/generated_mock_common.go
-@@ -364,6 +364,16 @@ func (_mr *_MockNetworkHandlerRecorder) BindTapDeviceToBridge(arg0, arg1 interfa
+@@ -374,6 +374,16 @@ func (_mr *_MockNetworkHandlerRecorder) BindTapDeviceToBridge(arg0, arg1 interfa
  	return _mr.mock.ctrl.RecordCall(_mr.mock, "BindTapDeviceToBridge", arg0, arg1)
  }
  
@@ -451,7 +451,7 @@ index 2bb7a41c4f3..b1ba262e94b 100644
  	ret := _m.ctrl.Call(_m, "DisableTXOffloadChecksum", ifaceName)
  	ret0, _ := ret[0].(error)
 diff --git a/pkg/network/infraconfigurators/BUILD.bazel b/pkg/network/infraconfigurators/BUILD.bazel
-index 0986fa4d4d4..786adb48dcf 100644
+index 0986fa4d4d4a..786adb48dcf3 100644
 --- a/pkg/network/infraconfigurators/BUILD.bazel
 +++ b/pkg/network/infraconfigurators/BUILD.bazel
 @@ -6,6 +6,7 @@ go_library(
@@ -463,7 +463,7 @@ index 0986fa4d4d4..786adb48dcf 100644
          "passt.go",
      ],
 diff --git a/pkg/network/infraconfigurators/common.go b/pkg/network/infraconfigurators/common.go
-index 39eb138074b..e3e5e9f74aa 100644
+index 39eb138074b2..e3e5e9f74aa8 100644
 --- a/pkg/network/infraconfigurators/common.go
 +++ b/pkg/network/infraconfigurators/common.go
 @@ -47,6 +47,10 @@ func createAndBindTapToBridge(handler netdriver.NetworkHandler, deviceName strin
@@ -479,7 +479,7 @@ index 39eb138074b..e3e5e9f74aa 100644
  		return converter.CalculateNetworkQueues(vmi)
 diff --git a/pkg/network/infraconfigurators/macvtap.go b/pkg/network/infraconfigurators/macvtap.go
 new file mode 100644
-index 00000000000..4b81ea2ffb9
+index 000000000000..4b81ea2ffb9a
 --- /dev/null
 +++ b/pkg/network/infraconfigurators/macvtap.go
 @@ -0,0 +1,302 @@
@@ -786,7 +786,7 @@ index 00000000000..4b81ea2ffb9
 +	return mac
 +}
 diff --git a/pkg/network/setup/podnic.go b/pkg/network/setup/podnic.go
-index 0a2b43b0e4b..c70730b4540 100644
+index bb1b2c28d89d..3bd022d34d85 100644
 --- a/pkg/network/setup/podnic.go
 +++ b/pkg/network/setup/podnic.go
 @@ -81,6 +81,13 @@ func newPhase1PodNIC(vmi *v1.VirtualMachineInstance, network *v1.Network, handle
@@ -803,7 +803,7 @@ index 0a2b43b0e4b..c70730b4540 100644
  	}
  	return podnic, nil
  }
-@@ -266,7 +273,7 @@ func (l *podNIC) PlugPhase2(domain *api.Domain) error {
+@@ -267,7 +274,7 @@ func (l *podNIC) PlugPhase2(domain *api.Domain) error {
  
  func (l *podNIC) newDHCPConfigurator() dhcpconfigurator.Configurator {
  	var dhcpConfigurator dhcpconfigurator.Configurator
@@ -812,7 +812,7 @@ index 0a2b43b0e4b..c70730b4540 100644
  		dhcpConfigurator = dhcpconfigurator.NewBridgeConfigurator(
  			l.cacheCreator,
  			getPIDString(l.launcherPID),
-@@ -306,7 +313,14 @@ func (l *podNIC) newLibvirtSpecGenerator(domain *api.Domain) domainspec.LibvirtS
+@@ -307,7 +314,14 @@ func (l *podNIC) newLibvirtSpecGenerator(domain *api.Domain) domainspec.LibvirtS
  		return domainspec.NewSlirpLibvirtSpecGenerator(l.vmiSpecIface, domain)
  	}
  	if l.vmiSpecIface.Macvtap != nil {
@@ -829,10 +829,10 @@ index 0a2b43b0e4b..c70730b4540 100644
  	if l.vmiSpecIface.Passt != nil {
  		return domainspec.NewPasstLibvirtSpecGenerator(l.vmiSpecIface, domain, l.vmi)
 diff --git a/pkg/virt-api/webhooks/validating-webhook/admitters/vmi-create-admitter.go b/pkg/virt-api/webhooks/validating-webhook/admitters/vmi-create-admitter.go
-index 3104870f108..dc9ee3979b2 100644
+index 91de9bb3a895..d377fdeced6f 100644
 --- a/pkg/virt-api/webhooks/validating-webhook/admitters/vmi-create-admitter.go
 +++ b/pkg/virt-api/webhooks/validating-webhook/admitters/vmi-create-admitter.go
-@@ -302,8 +302,6 @@ func validateInterfaceNetworkBasics(field *k8sfield.Path, networkExists bool, id
+@@ -300,8 +300,6 @@ func validateInterfaceNetworkBasics(field *k8sfield.Path, networkExists bool, id
  		causes = appendStatusCauseForBridgeNotEnabled(field, causes, idx)
  	} else if iface.InterfaceBindingMethod.Macvtap != nil && !config.MacvtapEnabled() {
  		causes = appendStatusCauseForMacvtapFeatureGateNotEnabled(field, causes, idx)
@@ -841,7 +841,7 @@ index 3104870f108..dc9ee3979b2 100644
  	} else if iface.InterfaceBindingMethod.Passt != nil && !config.PasstEnabled() {
  		causes = appendStatusCauseForPasstFeatureGateNotEnabled(field, causes, idx)
  	} else if iface.Passt != nil && networkData.Pod == nil {
-@@ -512,15 +510,6 @@ func validateForwardPortNonZero(field *k8sfield.Path, forwardPort v1.Port, idx i
+@@ -510,15 +508,6 @@ func validateForwardPortNonZero(field *k8sfield.Path, forwardPort v1.Port, idx i
  	return causes
  }
  
@@ -858,7 +858,7 @@ index 3104870f108..dc9ee3979b2 100644
  	causes = append(causes, metav1.StatusCause{
  		Type:    metav1.CauseTypeFieldValueInvalid,
 diff --git a/pkg/virt-config/configuration.go b/pkg/virt-config/configuration.go
-index 06ddcd1a7c4..3a953ce4074 100644
+index 06ddcd1a7c4b..3a953ce40743 100644
 --- a/pkg/virt-config/configuration.go
 +++ b/pkg/virt-config/configuration.go
 @@ -414,7 +414,7 @@ func validateConfig(config *v1.KubeVirtConfiguration) error {
@@ -871,7 +871,7 @@ index 06ddcd1a7c4..3a953ce4074 100644
  	default:
  		return fmt.Errorf("invalid default-network-interface in config: %v", config.NetworkConfiguration.NetworkInterface)
 diff --git a/pkg/virt-launcher/virtwrap/converter/network.go b/pkg/virt-launcher/virtwrap/converter/network.go
-index 61073f49b30..5c9ab9c1d57 100644
+index 61073f49b30e..5c9ab9c1d572 100644
 --- a/pkg/virt-launcher/virtwrap/converter/network.go
 +++ b/pkg/virt-launcher/virtwrap/converter/network.go
 @@ -85,7 +85,7 @@ func createDomainInterfaces(vmi *v1.VirtualMachineInstance, domain *api.Domain,
@@ -906,10 +906,10 @@ index 61073f49b30..5c9ab9c1d57 100644
  			// It's necessary to disable the iPXE option ROM as iPXE is not aware of SEV
  			domainIface.Rom = &api.Rom{Enabled: "no"}
 diff --git a/staging/src/kubevirt.io/api/core/v1/types.go b/staging/src/kubevirt.io/api/core/v1/types.go
-index e900458d72a..6ff88f8b561 100644
+index 4b901f6bcf89..d188f8f0a782 100644
 --- a/staging/src/kubevirt.io/api/core/v1/types.go
 +++ b/staging/src/kubevirt.io/api/core/v1/types.go
-@@ -1496,6 +1496,8 @@ const (
+@@ -1508,6 +1508,8 @@ const (
  	MasqueradeInterface NetworkInterfaceType = "masquerade"
  	// Virtual machine instance passt interface
  	PasstInterface NetworkInterfaceType = "passt"
