@@ -1,7 +1,9 @@
 {{- define "vmi_router_resources" }}
 cpu: 10m
 memory: 25Mi
-{{- end }}{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+{{- end }}
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -53,7 +55,9 @@ spec:
         - name: vmi-router
           args:
           - --db=/var/lib/kubevirt/vmi-router/routes.db
-          - --cidr=10.10.10.0/24
+          {{- range .Values.kubevirt.vmCIDRs }}
+          - --cidr={{ . }}
+          {{- end }}
           {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "vmiRouter") }}
           imagePullPolicy: "IfNotPresent"
@@ -76,3 +80,4 @@ spec:
           hostPath:
             path: /var/lib/kubevirt/vmi-router
             type: ""
+{{- end }}
