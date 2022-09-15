@@ -34,6 +34,7 @@ const (
 	secretBindingName          = "password_secret"
 	defaultBasicAuthPlainField = "auth"
 	defaultBeforeHelmOrder     = 10
+	generatedPasswdLength      = 20
 )
 
 func NewBasicAuthPlainHook(moduleValuesPath string, ns string, secretName string) *Hook {
@@ -97,8 +98,7 @@ func (h *Hook) Filter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, fmt.Errorf("cannot convert secret to struct: %v", err)
 	}
 
-	// Return field with basic auth.
-	return string(secret.Data[defaultBasicAuthPlainField]), nil
+	return secret.Data, nil
 }
 
 // Handle restores password from the configuration or from the Secret and
@@ -123,23 +123,16 @@ func (h *Hook) Handle(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	// Try to restore password from the Secret.
-	snap := input.Snapshots[secretBindingName]
-	if len(snap) > 0 {
-		secretField, ok := snap[0].(string)
-		if !ok {
-			return fmt.Errorf("problem getting field '%s' from Secret/%s: got %T, while string is expected", defaultBasicAuthPlainField, h.Secret.Name, snap[0])
-		}
-		storedPassword, err := h.extractPasswordFromBasicAuth(secretField)
-		if err != nil {
-			return err
-		}
-		input.Values.Set(passwordInternalKey, storedPassword)
-		return nil
+	// No password set in config values. Try to restore generated password from the Secret.
+	// Generate new password if no Secret or Secret has password that is not a generated one.
+
+	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.Snapshots[secretBindingName])
+	if err != nil {
+		input.LogEntry.Infof("No password in config values, generate new one: %s", err)
+		pass = GeneratePassword()
 	}
 
-	// No config value, no Secret, generate new password.
-	input.Values.Set(passwordInternalKey, GeneratePassword())
+	input.Values.Set(passwordInternalKey, pass)
 	return nil
 }
 
@@ -161,17 +154,41 @@ func (h *Hook) PasswordInternalKey() string {
 	return fmt.Sprintf(passwordInternalKeyTmpl, h.ValuesKey)
 }
 
-// extractPasswordFromBasicAuth extracts password from the plain basic auth string:
+// restoreGeneratedPasswordFromSnapshot extracts password from the plain basic auth string:
 // username:{PLAIN}password
-func (h *Hook) extractPasswordFromBasicAuth(basicAuth string) (string, error) {
-	parts := strings.SplitN(basicAuth, "{PLAIN}", 2)
-	if len(parts) != 2 {
-		return "", fmt.Errorf("field '%s' in Secret/%s is not a basic auth plain password", defaultBasicAuthPlainField, h.Secret.Name)
+func (h *Hook) restoreGeneratedPasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error) {
+	if len(snapshot) != 1 {
+		return "", fmt.Errorf("secret/%s not found", h.Secret.Name)
 	}
 
-	return strings.TrimSpace(parts[1]), nil
+	// Expect one field with basic auth.
+	secretData, ok := snapshot[0].(map[string][]byte)
+	if !ok {
+		return "", fmt.Errorf("secret/%s has empty data", h.Secret.Name)
+	}
+	if len(secretData) != 1 {
+		return "", fmt.Errorf("secret/%s has more than one field", h.Secret.Name)
+	}
+	authBytes, ok := secretData[defaultBasicAuthPlainField]
+	if !ok {
+		return "", fmt.Errorf("secret/%s has no %s field", h.Secret.Name, defaultBasicAuthPlainField)
+	}
+
+	// Extract password from basic auth.
+	auth := strings.TrimSpace(string(authBytes))
+	parts := strings.SplitN(auth, "{PLAIN}", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("secret/%s has %s field with malformed basic auth plain password", h.Secret.Name, defaultBasicAuthPlainField)
+	}
+
+	pass := strings.TrimSpace(parts[1])
+	if len(pass) != generatedPasswdLength {
+		return "", fmt.Errorf("secret/%s has %s field with custom password", h.Secret.Name, defaultBasicAuthPlainField)
+	}
+
+	return pass, nil
 }
 
 func GeneratePassword() string {
-	return pwgen.AlphaNum(20)
+	return pwgen.AlphaNum(generatedPasswdLength)
 }

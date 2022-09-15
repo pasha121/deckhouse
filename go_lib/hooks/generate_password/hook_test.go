@@ -19,35 +19,62 @@ package generate_password
 import (
 	"testing"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/stretchr/testify/require"
 )
 
-func TestExtractPassword(t *testing.T) {
+func TestRestoreGeneratedPassword(t *testing.T) {
 	const (
 		expectNoError = false
 		expectError   = true
 	)
+	genPass := GeneratePassword()
+
 	tests := []struct {
 		name       string
-		in         string
+		snapshot   []go_hook.FilterResult
 		expectPass string
 		expectErr  bool
 	}{
 		{
-			"password",
-			"admin:{PLAIN}pass",
-			"pass",
+			"generated password",
+			[]go_hook.FilterResult{map[string][]byte{
+				defaultBasicAuthPlainField: []byte("admin:{PLAIN}" + genPass),
+			}},
+			genPass,
 			expectNoError,
 		},
 		{
-			"no PLAIN marker",
-			"admin:pass",
+			"custom password",
+			[]go_hook.FilterResult{map[string][]byte{
+				defaultBasicAuthPlainField: []byte("admin:{PLAIN}pass"),
+			}},
 			"",
 			expectError,
 		},
 		{
-			"empty",
+			"no PLAIN marker",
+			[]go_hook.FilterResult{map[string][]byte{
+				defaultBasicAuthPlainField: []byte("admin:pass"),
+			}},
 			"",
+			expectError,
+		},
+		{
+			"empty snapshot",
+			[]go_hook.FilterResult{},
+			"",
+			expectError,
+		},
+		{
+			"empty data",
+			[]go_hook.FilterResult{map[string][]byte{}},
+			"",
+			expectError,
+		},
+		{
+			"multiple fields",
+			[]go_hook.FilterResult{map[string][]byte{"one": []byte(""), "two": []byte("")}},
 			"",
 			expectError,
 		},
@@ -56,11 +83,12 @@ func TestExtractPassword(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := NewBasicAuthPlainHook("testMod", "default", "auth")
-			pass, err := h.extractPasswordFromBasicAuth(tt.in)
+			pass, err := h.restoreGeneratedPasswordFromSnapshot(tt.snapshot)
 			if tt.expectErr == expectError {
-				require.NotNil(t, err, "input '%s' should not success", tt.in)
+				require.NotNil(t, err, "input '%s' should not success", tt.snapshot)
 			} else {
-				require.Equal(t, tt.expectPass, pass, "should extract password from '%s'", tt.in)
+				require.Nil(t, err, "should restore password successfully")
+				require.Equal(t, tt.expectPass, pass, "should extract password from '%s'", tt.snapshot)
 			}
 		})
 	}

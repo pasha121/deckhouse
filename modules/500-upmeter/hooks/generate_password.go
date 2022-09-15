@@ -29,6 +29,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
 
+/*
+This hook is similar to the hook from go_lib/hooks/generate_password.
+The difference is that this hook handles passwords for 2 apps
+at once: for the webui and for the status.
+*/
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/upmeter/generate_password",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -64,6 +70,8 @@ const (
 	externalAuthValuesTmpl     = "upmeter.auth.%s.externalAuthentication"
 	passwordValuesTmpl         = "upmeter.auth.%s.password"
 	passwordInternalValuesTmpl = "upmeter.internal.auth.%s.password"
+
+	generatedPasswdLength = 20
 )
 
 var authSecretNames = []string{statusSecretName, webuiSecretName}
@@ -73,8 +81,8 @@ var upmeterApps = map[string]string{
 }
 
 type storedPassword struct {
-	SecretName string `json:"name"`
-	Password   string `json:"password,omitempty"`
+	SecretName string            `json:"name"`
+	Data       map[string][]byte `json:"data"`
 }
 
 func filterAuthSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -84,26 +92,15 @@ func filterAuthSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, fmt.Errorf("cannot convert secret to struct: %v", err)
 	}
 
-	password := string(secret.Data[authSecretField])
-	if password != "" {
-		password = strings.TrimPrefix(password, "auth:{PLAIN}")
-	}
-
 	return storedPassword{
 		SecretName: secret.GetName(),
-		Password:   password,
+		Data:       secret.Data,
 	}, nil
 }
 
 // restoreOrGeneratePassword restores passwords from config values or secrets.
 // If there are no passwords, it generates new.
 func restoreOrGeneratePassword(input *go_hook.HookInput) error {
-	storedPasswords := map[string]string{}
-	for _, snap := range input.Snapshots[authSecretBinding] {
-		storedPassword := snap.(storedPassword)
-		storedPasswords[storedPassword.SecretName] = storedPassword.Password
-	}
-
 	for secretName, appName := range upmeterApps {
 		externalAuthValuesPath := fmt.Sprintf(externalAuthValuesTmpl, appName)
 		passwordValuesPath := fmt.Sprintf(passwordValuesTmpl, appName)
@@ -122,22 +119,66 @@ func restoreOrGeneratePassword(input *go_hook.HookInput) error {
 			continue
 		}
 
-		// Try to set password from the stored password.
-		if storedPassword, has := storedPasswords[secretName]; has {
-			input.Values.Set(passwordInternalValuesPath, storedPassword)
-			continue
+		// No password set in config values. Try to restore generated password from the Secret.
+		// Generate new password if no Secret or Secret has password that is not a generated one.
+
+		pass, err := restoreGeneratedPasswordFromSnapshot(input.Snapshots[authSecretBinding], secretName)
+		if err != nil {
+			input.LogEntry.Infof("No password for '%s' in config values, generate new one: %s", appName, err)
+			pass = GeneratePassword()
 		}
 
-		// Password is already in values. It should not happen, just a precaution.
-		_, ok = input.Values.GetOk(passwordInternalValuesPath)
-		if ok {
-			continue
-		}
-
-		// No password found for the app, generate new one.
-		newPasswd := pwgen.AlphaNum(20)
-		input.Values.Set(passwordInternalValuesPath, newPasswd)
+		input.Values.Set(passwordInternalValuesPath, pass)
 	}
 
 	return nil
+}
+
+func GeneratePassword() string {
+	return pwgen.AlphaNum(generatedPasswdLength)
+}
+
+// restoreGeneratedPasswordFromSnapshot extracts password from the plain basic auth string:
+// admin:{PLAIN}password
+func restoreGeneratedPasswordFromSnapshot(snapshot []go_hook.FilterResult, secretName string) (string, error) {
+	var secretData map[string][]byte
+	var hasSecret = false
+	// Find snapshot for appName.
+	for _, snap := range snapshot {
+		storedPassword := snap.(storedPassword)
+		if storedPassword.SecretName == secretName {
+			secretData = storedPassword.Data
+			hasSecret = true
+		}
+	}
+
+	if !hasSecret {
+		return "", fmt.Errorf("secret/%s not found", secretName)
+	}
+
+	// Expect one field with basic auth.
+	if secretData == nil {
+		return "", fmt.Errorf("secret/%s has empty data", secretName)
+	}
+	if len(secretData) != 1 {
+		return "", fmt.Errorf("secret/%s has more than one field", secretName)
+	}
+	authBytes, ok := secretData[authSecretField]
+	if !ok {
+		return "", fmt.Errorf("secret/%s has no %s field", secretName, authSecretField)
+	}
+
+	// Extract password from basic auth.
+	auth := strings.TrimSpace(string(authBytes))
+	parts := strings.SplitN(auth, "{PLAIN}", 2)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("secret/%s has %s field with malformed basic auth plain password", secretName, authSecretField)
+	}
+
+	pass := strings.TrimSpace(parts[1])
+	if len(pass) != generatedPasswdLength {
+		return "", fmt.Errorf("secret/%s has %s field with custom password", secretName, authSecretField)
+	}
+
+	return pass, nil
 }

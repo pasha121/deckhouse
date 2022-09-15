@@ -26,44 +26,63 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-type appSettings struct {
-	password                   string
-	passwordB64                string
-	nsManifest                 string
-	secretManifest             string
+type appTestSettings struct {
+	appName    string
+	secretName string
+
+	password          string
+	generatedPassword string
+
 	externalAuthValuesPath     string
 	passwordValuesPath         string
 	passwordInternalValuesPath string
 }
 
-var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
-	testSettings := make(map[string]*appSettings)
-	for secretName, appName := range upmeterApps {
-		settings := new(appSettings)
-
-		settings.password = fmt.Sprintf("t3stPassw0rd-%s", appName)
-		settings.passwordB64 = base64.StdEncoding.EncodeToString([]byte(settings.password))
-		settings.nsManifest = `
+func (a *appTestSettings) NsManifest() string {
+	return `
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: ` + upmeterNS + "\n"
+}
 
-		// Secret with password.
-		settings.secretManifest = `
+func (a *appTestSettings) GeneratedSecret() string {
+	return `
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: ` + secretName + `
+  name: ` + a.secretName + `
   namespace: ` + upmeterNS + `
 data:
-  auth: ` + settings.passwordB64 + "\n"
+  auth: ` + base64.StdEncoding.EncodeToString([]byte("admin:{PLAIN}"+a.generatedPassword)) + "\n"
+}
 
-		settings.externalAuthValuesPath = fmt.Sprintf(externalAuthValuesTmpl, appName)
-		settings.passwordValuesPath = fmt.Sprintf(passwordValuesTmpl, appName)
-		settings.passwordInternalValuesPath = fmt.Sprintf(passwordInternalValuesTmpl, appName)
+func (a *appTestSettings) CustomSecret() string {
+	return `
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ` + a.secretName + `
+  namespace: ` + upmeterNS + `
+data:
+  auth: ` + base64.StdEncoding.EncodeToString([]byte("admin:{PLAIN}"+a.password)) + "\n"
+}
+
+var _ = FDescribe("Modules :: upmeter :: hooks :: generate_password", func() {
+	testSettings := make(map[string]*appTestSettings)
+	for secretName, appName := range upmeterApps {
+		settings := &appTestSettings{
+			secretName:                 secretName,
+			appName:                    appName,
+			password:                   fmt.Sprintf("t3stPassw0rd-%s", appName),
+			generatedPassword:          GeneratePassword(),
+			externalAuthValuesPath:     fmt.Sprintf(externalAuthValuesTmpl, appName),
+			passwordValuesPath:         fmt.Sprintf(passwordValuesTmpl, appName),
+			passwordInternalValuesPath: fmt.Sprintf(passwordInternalValuesTmpl, appName),
+		}
 
 		testSettings[appName] = settings
 	}
@@ -73,11 +92,11 @@ data:
 
 			// Initialize internal.auth object for values patch to work.
 			f := HookExecutionConfigInit(
-				`{"upmeter": {"internal": {"auth": {"status": {}, "webui": {}}}} }`,
+				`{"global":{}, "upmeter": {"internal": {"auth": {"status": {}, "webui": {}}}} }`,
 				`{"upmeter":{}}`,
 			)
 
-			Context("with no auth settings", func() {
+			Context("without auth settings", func() {
 				BeforeEach(func() {
 					f.KubeStateSet("")
 					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -90,9 +109,22 @@ data:
 				})
 			})
 
-			Context("with password in configuration", func() {
+			Context("with auth.password in configuration, no Secret", func() {
 				BeforeEach(func() {
-					f.KubeStateSet("")
+					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+					f.ConfigValuesSet(settings.passwordValuesPath, settings.password)
+					f.RunHook()
+				})
+
+				It("should set password from configuration", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).Should(BeEquivalentTo(settings.password))
+				})
+			})
+
+			Context("with auth.password in configuration and password in Secret", func() {
+				BeforeEach(func() {
+					f.KubeStateSet(settings.NsManifest() + settings.GeneratedSecret())
 					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 					f.ConfigValuesSet(settings.passwordValuesPath, settings.password)
 					f.RunHook()
@@ -112,22 +144,40 @@ data:
 					f.RunHook()
 				})
 
-				It("should clean password from values", func() {
+				It("should clean password from internal values", func() {
 					Expect(f).To(ExecuteSuccessfully())
 					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).Should(BeEmpty())
 				})
 			})
 
-			Context("with password in Secret", func() {
+			Context("without auth, with generated password in Secret", func() {
 				BeforeEach(func() {
-					f.KubeStateSet(settings.nsManifest + settings.secretManifest)
+					f.KubeStateSet(settings.NsManifest() + settings.GeneratedSecret())
 					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-					f.ValuesSet(settings.passwordValuesPath, "not-a-test-password")
+					// Set internal value to emulate editing auth field by user.
+					f.ValuesSet(settings.passwordInternalValuesPath, "not-a-test-password")
 					f.RunHook()
 				})
 				It("should set password from Secret", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).Should(BeEquivalentTo(settings.password))
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).Should(BeEquivalentTo(settings.generatedPassword))
+				})
+			})
+
+			Context("without auth, with custom password in Secret", func() {
+				BeforeEach(func() {
+					f.KubeStateSet(settings.NsManifest() + settings.CustomSecret())
+					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+					// Set internal value to emulate editing auth field by user.
+					f.ValuesSet(settings.passwordInternalValuesPath, "not-a-test-password")
+					f.RunHook()
+				})
+				It("should generate new password", func() {
+					Expect(f).To(ExecuteSuccessfully())
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).Should(And(
+						HaveLen(generatedPasswdLength),
+						Not(Equal(settings.password)),
+					))
 				})
 			})
 
@@ -200,24 +250,22 @@ data:
 			})
 		})
 
-		Context("with passwords in Secrets", func() {
+		Context("with generated passwords in Secrets", func() {
 			BeforeEach(func() {
-				kubeState := ""
+				nsManifest := ""
+				secrets := ""
 				for _, settings := range testSettings {
-					if kubeState == "" {
-						kubeState = settings.nsManifest
-					}
-					kubeState += settings.secretManifest
-					f.ValuesSet(settings.passwordValuesPath, "not-a-test-password")
+					nsManifest = settings.NsManifest()
+					secrets += settings.GeneratedSecret()
 				}
-				f.KubeStateSet(kubeState)
+				f.KubeStateSet(nsManifest + secrets)
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.RunHook()
 			})
-			It("should set password from Secret", func() {
+			It("should restore generated passwords", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				for _, settings := range testSettings {
-					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).Should(BeEquivalentTo(settings.password))
+					Expect(f.ValuesGet(settings.passwordInternalValuesPath).String()).Should(BeEquivalentTo(settings.generatedPassword))
 				}
 			})
 		})
