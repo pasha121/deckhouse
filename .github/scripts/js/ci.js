@@ -10,7 +10,7 @@ const {
   knownKubernetesVersions,
   knownEditions,
   e2eDefaults,
-  skipE2eLabel
+  skipE2eLabel,
 } = require('./constants');
 
 const e2eStatus = require('./e2e-commit-status');
@@ -36,8 +36,14 @@ const {
   hasJobResult,
   renderJobStatusOneLine,
   renderJobStatusSeparate,
-  renderWorkflowStatusFinal, releaseIssueHeader
+  renderWorkflowStatusFinal,
+  releaseIssueHeader,
 } = require("./comments");
+
+const {
+  buildFailedE2eTestAdditionalInfo
+} = require("./e2e/cleanup");
+const {dispatchPullRequestCommand} = require("./pr-command-dispatcher");
 
 /**
  * Update a comment in "release" issue or pull request when workflow is started.
@@ -131,7 +137,7 @@ module.exports.updateCommentOnFinish = async ({
   needsContext,
   jobContext,
   stepsContext,
-  jobNames
+  jobNames,
 }) => {
   const repo_url = context.payload.repository.html_url;
   const run_id = context.runId;
@@ -179,7 +185,9 @@ module.exports.updateCommentOnFinish = async ({
     } else if (statusConfig.includes(',separate')) {
       statusReport = renderJobStatusSeparate(status, name, startedAt);
     } else if (statusConfig.includes(',final')) {
-      statusReport = renderWorkflowStatusFinal(status, name, ref, build_url, startedAt);
+      const addInfo = buildFailedE2eTestAdditionalInfo({needsContext, core, context});
+      core.debug(`Additional info: ${addInfo}`);
+      statusReport = renderWorkflowStatusFinal(status, name, ref, build_url, startedAt, addInfo);
     }
   }
 
@@ -238,7 +246,10 @@ module.exports.updateCommentOnFinish = async ({
 
     core.info(`Status for workflow report is ${status}`);
 
-    statusReport = renderWorkflowStatusFinal(status, name, ref, build_url, startedAt);
+    const addInfo = buildFailedE2eTestAdditionalInfo({needsContext, core, context});
+    core.debug(`Additional info: ${addInfo}`);
+
+    statusReport = renderWorkflowStatusFinal(status, name, ref, build_url, startedAt, addInfo);
   }
 
   if (statusConfig.includes(',final')) {
@@ -560,6 +571,32 @@ module.exports.checkValidationLabels = ({ core, labels }) => {
 };
 
 /**
+ * Extract argv slash command array from comment.
+ *
+ * @param {string} comment - A comment body.
+ * @returns {object}
+ */
+const extractCommandFromComment = (comment) => {
+  // Split comment to lines.
+  const lines = comment.split(/\r\n|\n|\r/).filter(l => l.startsWith('/'));
+  if (lines.length < 1) {
+    return {'err': 'first line is not a slash command'}
+  }
+
+  // Search for user command in the first line of the comment.
+  // User command is a command and a tag name.
+  const argv = lines[0].split(/\s+/);
+
+  if ( ! /^\/[a-z\d_\-\/.,]+$/.test(argv[0])) {
+    return {'err': 'not a slash command in the first line'};
+  }
+
+  return {argv, lines}
+};
+
+module.exports.extractCommandFromComment = extractCommandFromComment;
+
+/**
  *
  *
  * @param cmdArg - String with possible git ref. Support main and release branches, and tags.
@@ -582,8 +619,10 @@ const parseCommandArgumentAsRef = (cmdArg) => {
   if (ref) {
     return parseGitRef(ref);
   }
-  return {notFoundMsg: `git_ref ${cmdArg} not allowed. Only main, release-X.Y, vX.Y.Z or test-vX.Y.Z.`};
+  return {err: `git_ref ${cmdArg} not allowed. Only main, release-X.Y, vX.Y.Z or test-vX.Y.Z.`};
 };
+
+module.exports.parseCommandArgumentAsRef = parseCommandArgumentAsRef;
 
 /**
  * Detect slash command in the comment.
@@ -593,92 +632,43 @@ const parseCommandArgumentAsRef = (cmdArg) => {
  *   /e2e/use/k8s/1.22
  *   /e2e/use/cri/docker
  *   /e2e/use/cri/containerd
+ *   /e2e/failed/abort
  *   /deploy/web/stage v1.3.2
  *   /deploy/alpha - to deploy all editions
  *   /deploy/alpha/ce,ee,fe
  *   /suspend/alpha
  *
  * @param {object} inputs
- * @param {object} inputs.comment - A comment body.
+ * @param {string} inputs.comment - A comment body.
+ * @param {object} inputs.context - An object containing the context of the workflow run.
+ * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @returns {object}
  */
-const detectSlashCommand = ({ comment }) => {
-  // Split comment to lines.
-  const lines = comment.split(/\r\n|\n|\r/).filter(l => l.startsWith('/'));
-  if (lines.length < 1) {
-    return {notFoundMsg: 'first line is not a slash command'}
+const detectSlashCommand = ({ comment , context, core}) => {
+  const arg = extractCommandFromComment(comment);
+  if(arg.err) {
+    return {notFoundMsg: arg.err}
   }
 
-  // Search for user command in the first line of the comment.
-  // User command is a command and a tag name.
-  const parts = lines[0].split(/\s+/);
-
-  if ( ! /^\/[a-z\d_\-\/.,]+$/.test(parts[0])) {
-    return {notFoundMsg: 'not a slash command in the first line'};
-  }
-
+  const parts = arg.argv;
   const command = parts[0];
 
-  // Initial ref for e2e/run with 2 args.
-  let initialRef = null
-  // A ref for workflow and a target ref for e2e release update test.
-  let targetRef = null
-
-  if (parts[1] && parts[2]) {
-    initialRef = parseCommandArgumentAsRef(parts[1])
-    targetRef = parseCommandArgumentAsRef(parts[2])
-  } else if (parts[1]) {
-    targetRef = parseCommandArgumentAsRef(parts[1])
-  }
-
-  if (initialRef && initialRef.notFoundMsg) {
-    return initialRef
-  }
-  if (targetRef && targetRef.notFoundMsg) {
-    return targetRef
-  }
-
-  let workflow_id = '';
+  let workflow_id = ''
   let inputs = null;
 
-  // Detect /e2e/run/* commands and /e2e/use/* arguments.
-  const isE2E = Object.entries(knownLabels)
-    .some(([name, info]) => {
-      return info.type.startsWith('e2e') && command.startsWith('/'+name)
-    })
-  if (isE2E) {
-    for (const provider of knownProviders) {
-      if (command.includes(provider)) {
-        workflow_id = `e2e-${provider}.yml`;
-        break;
-      }
+  const cmd = dispatchPullRequestCommand({arg, context, core})
+  if(cmd) {
+    if (cmd.err) {
+      return {notFoundMsg: cmd.err}
     }
 
-    // Extract cri and ver from the rest lines or use defaults.
-    if (workflow_id) {
-      let ver = [];
-      let cri = [];
-      for (const line of lines) {
-        let useParts = line.split('/e2e/use/cri/');
-        if (useParts[1]) {
-          cri.push(useParts[1]);
-        }
-        useParts = line.split('/e2e/use/k8s/');
-        if (useParts[1]) {
-          ver.push(useParts[1]);
-        }
-      }
+    return cmd
+  }
 
-      inputs = {
-        cri: cri.join(','),
-        ver: ver.join(','),
-      }
-
-      // Add initial_ref_slug input when e2e command has two args.
-      if (initialRef) {
-        inputs.initial_ref_slug = initialRef.refSlug
-      }
-    }
+  // A ref for workflow and a target ref for e2e release update test.
+  let targetRef = parseCommandArgumentAsRef(parts[1])
+  if (targetRef.err) {
+    return {notFoundMsg: targetRef.err}
   }
 
   // Detect /deploy/* commands.
@@ -749,6 +739,7 @@ const reactToComment = async ({github, context, comment_id, content}) => {
     content,
   });
 };
+module.exports.reactToComment = reactToComment;
 
 /**
  * Use issue comment to determine a workflow to run.
@@ -765,7 +756,7 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
   const comment_id = event.comment.id;
   core.debug(`Event: ${JSON.stringify(event)}`);
 
-  const slashCommand = detectSlashCommand({ comment: event.comment.body });
+  const slashCommand = detectSlashCommand({ comment: event.comment.body, context, core });
   if (slashCommand.notFoundMsg) {
     return core.info(`Ignore comment: ${slashCommand.notFoundMsg}.`);
   }
@@ -803,6 +794,8 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
     } else {
       failedMsg = `Command '${slashCommand.command}' requires issue to relate to milestone with version in title. Got milestone '${event.issue.milestone.title}'.`
     }
+  } else if(slashCommand.isDestroyFailedE2e) {
+    workflow_ref = slashCommand.targetRef;
   }
 
   // Git ref is malformed.
@@ -996,6 +989,8 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
         pull_request_sha: context.payload.pull_request.head.sha,
         pull_request_head_label: context.payload.pull_request.head.label
       };
+
+      core.debug(`Pull request info: ${JSON.stringify(prInfo)}`)
 
       await startWorkflow({
         github,
@@ -1347,6 +1342,7 @@ const startWorkflow = async ({ github, context, core, workflow_id, ref, inputs }
   }
   return core.info(`Workflow '${workflow_id}' started successfully`);
 };
+module.exports.startWorkflow = startWorkflow;
 
 /**
  * Start 'build-and-test_release.yml' workflow depending on context.ref.

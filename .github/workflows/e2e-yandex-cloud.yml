@@ -81,6 +81,7 @@ jobs:
       ci_commit_ref_slug: ${{ steps.git_info.outputs.ci_commit_ref_slug }}
       ref_full: ${{ steps.git_info.outputs.ref_full }}
       github_sha: ${{ steps.git_info.outputs.github_sha }}
+      pr_number: ${{ steps.git_info.outputs.pr_number }}
     # Skip the CI for automation PRs, e.g. changelog
     if: ${{ github.event.pull_request.user.login != 'deckhouse-BOaTswain' }}
     steps:
@@ -89,6 +90,8 @@ jobs:
         uses: actions/github-script@v5.0.0
         with:
           script: |
+            core.debug(`Event: ${context.eventName}`)
+            core.debug(`Inputs: ${JSON.stringify(context.payload.inputs)}`)
             const { GITHUB_REF_TYPE, GITHUB_REF_NAME, GITHUB_REF } = process.env
 
             let refSlug = ''
@@ -97,18 +100,22 @@ jobs:
             let githubBranch = ''
             let githubTag = ''
             let githubSHA = ''
+            let prNumber = ''
             if (context.eventName === "workflow_dispatch" && context.payload.inputs && context.payload.inputs.pull_request_ref) {
+              core.debug(`Workflow dispatch and ref ${context.payload.inputs.pull_request_ref}`)
               // Trigger: workflow_dispatch with pull_request_ref.
               // Extract pull request number from 'refs/pull/<NUM>/merge'
-              const prNum   = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+              prNumber = context.payload.inputs.pull_request_ref.replace('refs/pull/', '').replace('/merge', '').replace('/head', '')
+              core.debug(`Pull request number ${prNumber}`)
 
-              refSlug       = `pr${prNum}`
+              refSlug       = `pr${prNumber}`
               refName       = context.payload.inputs.ci_commit_ref_name
               refFull       = context.payload.inputs.pull_request_ref
               githubBranch  = refName
               githubSHA     = context.payload.inputs.pull_request_sha
               core.info(`workflow_dispatch event: set git info from inputs. inputs: ${JSON.stringify(context.payload.inputs)}`)
             } else if (context.eventName === "pull_request" || context.eventName === "pull_request_target" ) {
+              core.debug(`eventName === "pull_request" or target`)
               // For PRs from forks, tag images with `prXXX` to avoid clashes between branches.
               const targetRepo = context.payload.repository.full_name;
               const prRepo = context.payload.pull_request.head.repo.full_name
@@ -120,7 +127,9 @@ jobs:
               githubBranch = refName
               githubSHA = context.payload.pull_request.head.sha
               core.info(`pull request event: set git info from pull_request.head. pr:${prRepo}:${prRef} target:${targetRepo}:${context.ref}`)
+              prNumber = context.issue.number
             } else {
+              core.debug(`Other trigger`)
               // Other triggers: workflow_dispatch without pull_request_ref, schedule, push...
               // refName is 'main' or tag name, so slugification is not necessary.
               refSlug       = GITHUB_REF_NAME
@@ -130,7 +139,12 @@ jobs:
               githubBranch  = GITHUB_REF_TYPE == "branch" ? refName : ""
               githubSHA     = context.sha
               core.info(`${context.eventName} event: set git info from context: ${JSON.stringify({GITHUB_REF_NAME, GITHUB_REF_TYPE, sha: context.sha })}`)
+              if (context.issue && context.issue.number) {
+                prNumber = context.issue.number
+              }
             }
+
+
 
             core.setCommandEcho(true)
             core.setOutput('ci_commit_ref_slug', refSlug)
@@ -139,6 +153,7 @@ jobs:
             core.setOutput(`ci_commit_branch`, githubBranch)
             core.setOutput(`ref_full`, refFull)
             core.setOutput('github_sha', githubSHA)
+            core.setOutput('pr_number', prNumber)
             core.setCommandEcho(false)
 
   # </template: git_info_job>
@@ -185,6 +200,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_20 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_docker_1_20
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;docker;1.20"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -272,7 +298,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -360,6 +386,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -367,8 +394,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Docker/1.20"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -385,6 +414,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -398,6 +432,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -407,6 +457,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -423,9 +474,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -442,6 +513,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -455,6 +531,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -464,6 +545,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -480,13 +562,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_docker_1_20
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_docker_1_20
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -538,6 +632,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_21 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_docker_1_21
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;docker;1.21"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -625,7 +730,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -713,6 +818,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -720,8 +826,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Docker/1.21"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -738,6 +846,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -751,6 +864,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -760,6 +889,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -776,9 +906,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -795,6 +945,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -808,6 +963,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -817,6 +977,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -833,13 +994,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_docker_1_21
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_docker_1_21
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -891,6 +1064,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_22 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_docker_1_22
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;docker;1.22"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -978,7 +1162,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -1066,6 +1250,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -1073,8 +1258,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Docker/1.22"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1091,6 +1278,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1104,6 +1296,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1113,6 +1321,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -1129,9 +1338,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1148,6 +1377,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1161,6 +1395,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1170,6 +1409,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -1186,13 +1426,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_docker_1_22
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_docker_1_22
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -1244,6 +1496,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_23 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_docker_1_23
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;docker;1.23"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -1331,7 +1594,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -1419,6 +1682,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -1426,8 +1690,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Docker/1.23"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1444,6 +1710,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1457,6 +1728,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1466,6 +1753,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -1482,9 +1770,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1501,6 +1809,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1514,6 +1827,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1523,6 +1841,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -1539,13 +1858,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_docker_1_23
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_docker_1_23
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -1597,6 +1928,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_docker_1_24 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_docker_1_24
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;docker;1.24"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -1684,7 +2026,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -1772,6 +2114,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -1779,8 +2122,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Docker/1.24"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1797,6 +2142,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1810,6 +2160,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1819,6 +2185,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -1835,9 +2202,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Docker
@@ -1854,6 +2241,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1867,6 +2259,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -1876,6 +2273,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -1892,13 +2290,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_docker_1_24
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_docker_1_24
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -1950,6 +2360,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_20 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_containerd_1_20
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;containerd;1.20"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -2037,7 +2458,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -2125,6 +2546,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -2132,8 +2554,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.20"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2150,6 +2574,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2163,6 +2592,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2172,6 +2617,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -2188,9 +2634,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2207,6 +2673,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2220,6 +2691,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2229,6 +2705,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -2245,13 +2722,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_containerd_1_20
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_containerd_1_20
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -2303,6 +2792,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_21 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_containerd_1_21
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;containerd;1.21"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -2390,7 +2890,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -2478,6 +2978,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -2485,8 +2986,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.21"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2503,6 +3006,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2516,6 +3024,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2525,6 +3049,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -2541,9 +3066,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2560,6 +3105,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2573,6 +3123,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2582,6 +3137,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -2598,13 +3154,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_containerd_1_21
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_containerd_1_21
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -2656,6 +3224,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_22 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_containerd_1_22
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;containerd;1.22"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -2743,7 +3322,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -2831,6 +3410,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -2838,8 +3418,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.22"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2856,6 +3438,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2869,6 +3456,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2878,6 +3481,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -2894,9 +3498,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -2913,6 +3537,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2926,6 +3555,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -2935,6 +3569,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -2951,13 +3586,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_containerd_1_22
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_containerd_1_22
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -3009,6 +3656,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_23 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_containerd_1_23
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;containerd;1.23"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -3096,7 +3754,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -3184,6 +3842,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -3191,8 +3850,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.23"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -3209,6 +3870,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3222,6 +3888,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -3231,6 +3913,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -3247,9 +3930,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -3266,6 +3969,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3279,6 +3987,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -3288,6 +4001,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -3304,13 +4018,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_containerd_1_23
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_containerd_1_23
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()
@@ -3362,6 +4088,17 @@ jobs:
       - check_e2e_labels
       - git_info
     if: needs.check_e2e_labels.outputs.run_containerd_1_24 == 'true'
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      run_id: ${{ github.run_id }}
+      state_artifact_name: failed_cluster_state_yandex-cloud_containerd_1_24
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "yandex-cloud;WithoutNAT;containerd;1.24"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -3449,7 +4186,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-
+      # <template: e2e_setup_step>
       - name: Setup
         id: setup
         env:
@@ -3537,6 +4274,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -3544,8 +4282,10 @@ jobs:
 
           echo '::echo::off'
 
+      # </template: e2e_setup_step>
+
       - name: "Run e2e test: Yandex.Cloud/Containerd/1.24"
-        timeout-minutes: 60
+        id: e2e_test_run
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -3562,6 +4302,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh run-test' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3575,6 +4320,22 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-run-test-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+          echo "Start waiting ssh connection string script"
+          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+          echo "Full comment url for updating ${comment_url}"
+
+          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo '::echo::on'
+          echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+          echo '::echo::off'
+
+          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -3584,6 +4345,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -3600,9 +4362,29 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Read connection string
+        if: ${{ failure() || cancelled() }}
+        id: check_stay_failed_cluster
+        uses: actions/github-script@v5.0.0
+        env:
+          SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+        with:
+          # it sets `should_run` output var if e2e/failed/stay label
+          script: |
+            const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+            await e2e_cleanup.readConnectionScript({core, context, github});
+
+      - name: Label pr if e2e failed
+        if: ${{ failure() || cancelled() }}
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          number: ${{ needs.git_info.outputs.pr_number }}
+          labels: "e2e/cluster/failed"
+
       - name: Cleanup bootstrapped cluster
-        if: always()
-        timeout-minutes: 60
+        if: ${{ success() }}
+        id: cleanup_cluster
         env:
           PROVIDER: Yandex.Cloud
           CRI: Containerd
@@ -3619,6 +4401,11 @@ jobs:
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3632,6 +4419,11 @@ jobs:
             TMP_DIR_PATH=${TMP_DIR_PATH}
           "
 
+          ls -lh $(pwd)/testing
+
+          dhctl_log_file="${DHCTL_LOG_FILE}-cleanup-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          echo "DHCTL log file: $dhctl_log_file"
+
           docker run --rm \
             -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
             -e PREFIX=${PREFIX} \
@@ -3641,6 +4433,7 @@ jobs:
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
             -e LAYOUT=${LAYOUT:-not_provided} \
+            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
             -e LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided} \
             -e LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided} \
@@ -3657,13 +4450,25 @@ jobs:
 
         # </template: e2e_run_template>
 
+      - name: Save dhctl state
+        id: save_failed_cluster_state
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: failed_cluster_state_yandex-cloud_containerd_1_24
+          path: |
+            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
       - name: Save test results
         if: always()
         uses: actions/upload-artifact@v2
         with:
           name: test_output_yandex-cloud_containerd_1_24
           path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
             testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
 
       - name: Cleanup temp directory
         if: always()

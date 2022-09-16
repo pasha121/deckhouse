@@ -1,7 +1,9 @@
 //@ts-check
 
 const skipE2eLabel = 'skip/e2e';
+const abortFailedE2eCommand = '/e2e/failed/abort';
 module.exports.skipE2eLabel = skipE2eLabel;
+module.exports.abortFailedE2eCommand = abortFailedE2eCommand;
 
 // Labels available for pull requests.
 const labels = {
@@ -88,6 +90,8 @@ module.exports.labelsSrv = {
         if (labelType === 'deploy-web') {
           return info.env === labelSubject;
         }
+
+        return true;
       }
       return false;
     }) || [''])[0];

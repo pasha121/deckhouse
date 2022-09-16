@@ -10,6 +10,7 @@ jobs:
     outputs:
       trigger_for_release_issue: ${{steps.check.outputs.trigger_for_release_issue}}
       trigger_for_changelog: ${{steps.check.outputs.trigger_for_changelog}}
+      trigger_for_pull_request: ${{steps.check.outputs.trigger_for_pull_request}}
     steps:
       - name: Check conditions for release issue
         id: check
@@ -50,6 +51,10 @@ jobs:
               return core.setOutput('trigger_for_changelog', 'true');
             }
 
+            if (isPR) {
+              core.notice(`Comment on pull request.`);
+              return core.setOutput('trigger_for_pull_request', 'true');
+            }
 
   trigger_for_release_issue:
     name: Trigger workflow by comment
@@ -66,6 +71,22 @@ jobs:
           script: |
             const ci = require('./.github/scripts/js/ci');
             return await ci.runSlashCommandForReleaseIssue({github, context, core});
+
+  trigger_for_pull_request:
+    name: Trigger workflow by comment from pull-request
+    runs-on: ubuntu-latest
+    needs:
+    - conditions
+    if: ${{needs.conditions.outputs.trigger_for_pull_request == 'true'}}
+    steps:
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Run workflow
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const ci = require('./.github/scripts/js/pr-command-dispatcher');
+            return await ci.runSlashCommandForPullRequest({github, context, core});
 
   trigger_for_changelog:
     name: Dispatch Changelog Event

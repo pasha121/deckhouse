@@ -38,6 +38,107 @@
 # </template: set_e2e_requirement_status>
 {!{- end -}!}
 
+{!{ define "e2e_setup_step" }!}
+{!{- $ctx := . -}!}
+# <template: e2e_setup_step>
+- name: Setup
+  id: setup
+  env:
+    DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+    CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+    CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+    CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+    REF_FULL: ${{needs.git_info.outputs.ref_full}}
+    INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
+    MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
+  run: |
+    # Calculate unique prefix for e2e test.
+    # GITHUB_RUN_ID is a unique number for each workflow run.
+    # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+    # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+    # CRI and PROVIDER values are trimmed to reduce prefix length.
+    DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}")
+    if [[ "${MANUAL_RUN}" == "false" ]] ; then
+      # for jobs which run multiple providers concurrency (daily e2e, for example)
+      # add provider suffix to prevent "directory already exists" error
+      DHCTL_PREFIX="${DHCTL_PREFIX}-$(echo ${PROVIDER} | head -c 2)"
+    fi
+    # converts to DNS-like (all letters in lower case and replace all dots to dash)
+    # because it prefix will use for k8s resources names (nodes, for example)
+    DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+    # Create tmppath for test script.
+    TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
+    if [[ -d "${TMP_DIR_PATH}" ]] ; then
+      echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
+      ls -la ${TMP_DIR_PATH}
+      exit 1
+    else
+      echo "Create temporary dir for job: ${TMP_DIR_PATH}."
+      mkdir -p "${TMP_DIR_PATH}"
+    fi
+
+    ## Source: ci_templates/build.yml
+
+    # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+    REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+    if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+      # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+      REPO_SUFFIX=
+    fi
+
+    # Use dev-registry for Git branches.
+    BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+    # Use rw-registry for Git tags.
+    SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+    if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+      # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+      # Use dev-regisry for branches and Github Container Registry for semver tags.
+      BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+      SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+    fi
+
+    # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+    INITIAL_IMAGE_TAG=
+    if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+      INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+    fi
+
+    # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
+    # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+    # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+    IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+    INSTALL_IMAGE_NAME=
+    if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+      # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+      INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+    fi
+    if [[ -n ${CI_COMMIT_TAG} ]] ; then
+      REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+      INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+    fi
+    SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+    echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+    # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+    echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
+    docker pull "${INSTALL_IMAGE_NAME}"
+
+    echo '::echo::on'
+    echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+    echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
+    echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
+    echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
+    echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
+    echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+
+    echo '::echo::off'
+
+# </template: e2e_setup_step>
+{!{- end -}!}
+
 {!{ define "e2e_send_alert_template" }!}
 {!{- $ctx := index . 0 -}!}
 
@@ -74,6 +175,11 @@
   LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
 {!{- end }!}
+  COMMENT_ID: ${{ inputs.comment_id }}
+  GITHUB_API_SERVER: ${{ github.api_url }}
+  REPOSITORY: ${{ github.repository }}
+  DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+  TOKEN_GITHUB_BOT: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
 run: |
   echo "Execute '{!{ $script }!} {!{ $script_arg }!}' via 'docker run', using environment:
     INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -87,6 +193,24 @@ run: |
     TMP_DIR_PATH=${TMP_DIR_PATH}
   "
 
+  ls -lh $(pwd)/testing
+
+  dhctl_log_file="${DHCTL_LOG_FILE}-{!{ $script_arg }!}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+  echo "DHCTL log file: $dhctl_log_file"
+
+{!{- if eq $script_arg "run-test" }!}
+  echo "Start waiting ssh connection string script"
+  comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
+  echo "Full comment url for updating ${comment_url}"
+
+  ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+  echo '::echo::on'
+  echo "::set-output name=ssh_connection_str_file::${ssh_connect_str_file}"
+  echo '::echo::off'
+
+  $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" > "${dhctl_log_file}-wait-log" 2>&1 &
+{!{ end }!}
+
   docker run --rm \
     -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
     -e PREFIX=${PREFIX} \
@@ -96,6 +220,7 @@ run: |
     -e CRI=${CRI} \
     -e PROVIDER=${PROVIDER:-not_provided} \
     -e LAYOUT=${LAYOUT:-not_provided} \
+    -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
     -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
 {!{- if eq $provider "aws" }!}
     -e LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided} \
@@ -184,6 +309,17 @@ check_e2e_labels:
 {!{- if coll.Has $ctx "manualRun" }!}
   if: needs.check_e2e_labels.outputs.run_{!{ $ctx.cri }!}_{!{ $ctx.kubernetesVersionSlug }!} == 'true'
 {!{- end }!}
+  outputs:
+    ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+    run_id: ${{ github.run_id }}
+    state_artifact_name: failed_cluster_state_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
+    # need for find state in artifact
+    cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+    ran_for: {!{ printf "%s;%s;%s;%s" $ctx.provider $ctx.layout $ctx.cri $ctx.kubernetesVersion | quote }!}
+    failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+    issue_number: ${{ inputs.issue_number }}
+    ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+    pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
   env:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
@@ -202,102 +338,10 @@ check_e2e_labels:
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
-
-    - name: Setup
-      id: setup
-      env:
-        DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-        CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-        CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-        REF_FULL: ${{needs.git_info.outputs.ref_full}}
-        INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
-        MANUAL_RUN: {!{ coll.Has $ctx "manualRun" | conv.ToString | strings.Quote }!}
-      run: |
-        # Calculate unique prefix for e2e test.
-        # GITHUB_RUN_ID is a unique number for each workflow run.
-        # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
-        # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
-        # CRI and PROVIDER values are trimmed to reduce prefix length.
-        DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION}")
-        if [[ "${MANUAL_RUN}" == "false" ]] ; then
-          # for jobs which run multiple providers concurrency (daily e2e, for example)
-          # add provider suffix to prevent "directory already exists" error
-          DHCTL_PREFIX="${DHCTL_PREFIX}-$(echo ${PROVIDER} | head -c 2)"
-        fi
-        # converts to DNS-like (all letters in lower case and replace all dots to dash)
-        # because it prefix will use for k8s resources names (nodes, for example)
-        DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
-
-        # Create tmppath for test script.
-        TMP_DIR_PATH=/mnt/cloud-layouts/layouts/${DHCTL_PREFIX}
-        if [[ -d "${TMP_DIR_PATH}" ]] ; then
-          echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-          ls -la ${TMP_DIR_PATH}
-          exit 1
-        else
-          echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-          mkdir -p "${TMP_DIR_PATH}"
-        fi
-
-        ## Source: ci_templates/build.yml
-
-        # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
-        REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
-        if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
-          # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
-          REPO_SUFFIX=
-        fi
-
-        # Use dev-registry for Git branches.
-        BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-        # Use rw-registry for Git tags.
-        SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
-
-        if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-          # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
-          # Use dev-regisry for branches and Github Container Registry for semver tags.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-          SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-        fi
-
-        # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
-        INITIAL_IMAGE_TAG=
-        if [[ -n ${INITIAL_REF_SLUG} ]] ; then
-          INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-        fi
-
-        # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
-        # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-        # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-        IMAGE_TAG=${CI_COMMIT_REF_SLUG}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-
-        INSTALL_IMAGE_NAME=
-        if [[ -n ${CI_COMMIT_BRANCH} ]]; then
-          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-          INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
-        fi
-        if [[ -n ${CI_COMMIT_TAG} ]] ; then
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
-          INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
-        fi
-        SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
-        echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
-
-        # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-        echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-        docker pull "${INSTALL_IMAGE_NAME}"
-
-        echo '::echo::on'
-        echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-        echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
-        echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
-        echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
-        echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
-
-        echo '::echo::off'
+{!{ tmpl.Exec "e2e_setup_step" . | strings.Indent 4 }!}
 
     - name: "Run e2e test: {!{ $ctx.providerName }!}/{!{ $ctx.criName }!}/{!{ $ctx.kubernetesVersion }!}"
+      id: e2e_test_run
       timeout-minutes: 60
       env:
         PROVIDER: {!{ $ctx.providerName }!}
@@ -313,8 +357,29 @@ check_e2e_labels:
         INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
   {!{- tmpl.Exec "e2e_run_template" (slice .provider "run-test") | strings.Indent 6 }!}
 
+    - name: Read connection string
+      if: ${{ failure() || cancelled() }}
+      id: check_stay_failed_cluster
+      uses: {!{ index (ds "actions") "actions/github-script" }!}
+      env:
+        SSH_CONNECT_STR_FILE: ${{ steps.e2e_test_run.outputs.ssh_connection_str_file }}
+      with:
+        # it sets `should_run` output var if e2e/failed/stay label
+        script: |
+          const e2e_cleanup = require('./.github/scripts/js/e2e/cleanup');
+          await e2e_cleanup.readConnectionScript({core, context, github});
+
+    - name: Label pr if e2e failed
+      if: ${{ failure() || cancelled() }}
+      uses: actions-ecosystem/action-add-labels@v1
+      with:
+        github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+        number: ${{ needs.git_info.outputs.pr_number }}
+        labels: "e2e/cluster/failed"
+
     - name: Cleanup bootstrapped cluster
-      if: always()
+      if: ${{ success() }}
+      id: cleanup_cluster
       timeout-minutes: 60
       env:
         PROVIDER: {!{ $ctx.providerName }!}
@@ -330,13 +395,25 @@ check_e2e_labels:
         INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
   {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
 
+    - name: Save dhctl state
+      id: save_failed_cluster_state
+      if: ${{ failure() }}
+      uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
+      with:
+        name: failed_cluster_state_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
+        path: |
+          ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
+          ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
+
     - name: Save test results
       if: always()
       uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
       with:
         name: test_output_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
         path: |
+          ${{ steps.setup.outputs.dhctl-log-file}}*
           testing/cloud_layouts/
+          !testing/cloud_layouts/**/sshkey
 
     - name: Cleanup temp directory
       if: always()
@@ -356,11 +433,100 @@ check_e2e_labels:
 
 {!{- if not (coll.Has $ctx "manualRun") }!}
 
+  # general error alter
   {!{- $labels := dict "trigger" "CloudLayoutTestFailed" "provider" $ctx.providerName "layout" $ctx.layout "cri" $ctx.criName "kube_version" $ctx.kubernetesVersion -}!}
   {!{- $annotations := dict "summary" "Cloud Layout Test failed" "description" "Check Github workflow log for more information" -}!}
   {!{- $if := "github.ref == 'refs/heads/main' && (cancelled() || failure())" -}!}
   {!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations "if" $if )) | strings.Indent 4 }!}
 
+  # alert about cluster was not cleaned correctly
+  {!{- $labels = dict "trigger" "CloudLayoutTestClusterNotDestroyed" "provider" $ctx.providerName "layout" $ctx.layout "cri" $ctx.criName "kube_version" $ctx.kubernetesVersion -}!}
+  {!{- $annotations = dict "summary" "Cloud resources did not clean after e2e run" "description" "Check Github workflow log and remove cloud resources" -}!}
+  {!{- $if = "github.ref == 'refs/heads/main' && (cancelled() || failure()) && steps.cleanup-{!{ $ctx.jobID }!}.outcome" -}!}
+  {!{- tmpl.Exec "e2e_send_alert_template" (slice (dict "labels" $labels "annotations" $annotations "if" $if )) | strings.Indent 4 }!}
+  {!{- end }!}
+# </template: e2e_run_job_template>
+{!{ end -}!}
+
+{!{/* One e2e cleanup job. */}!}
+{!{- define "e2e_clean_job_template" -}!}
+{!{- $ctx := . -}!}
+{!{- $runsOnLabel := "e2e-common" -}!}
+{!{- if eq $ctx.provider "vsphere"  -}!}
+{!{-   $runsOnLabel = "e2e-vsphere" -}!}
+{!{- end -}!}
+# <template: e2e_run_job_template>
+{!{ $ctx.jobID }!}:
+  name: "{!{ $ctx.jobName }!}"
+  if: ${{ github.event.inputs.cri == '{!{ $ctx.cri }!}' && github.event.inputs.k8s_version == '{!{ $ctx.kubernetesVersion }!}' && github.event.inputs.layout == '{!{ $ctx.layout }!}' }}
+  needs:
+    - git_info
+  env:
+    PROVIDER: {!{ $ctx.providerName }!}
+    CRI: {!{ $ctx.criName }!}
+    LAYOUT: {!{ $ctx.layout }!}
+    KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+    EVENT_LABEL: ${{ github.event.label.name }}
+  runs-on: [self-hosted, {!{ $runsOnLabel }!}]
+  steps:
+{!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
+
+{!{- if coll.Has $ctx "manualRun" }!}
+{!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
+
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
+{!{ tmpl.Exec "e2e_setup_step" . | strings.Indent 4 }!}
+
+    - name: "Download state"
+      id: download_artifact_with_state
+      uses: dawidd6/action-download-artifact@v2.23.0
+      with:
+        github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+        run_id: ${{github.event.inputs.run_id}}
+        name: ${{github.event.inputs.state_artifact_name}}
+        path: ${{ steps.setup.outputs.tmp-dir-path}}
+
+    - name: Cleanup bootstrapped cluster
+      if: ${{ success() }}
+      id: cleanup_cluster
+      env:
+        PROVIDER: {!{ $ctx.providerName }!}
+        CRI: {!{ $ctx.criName }!}
+        LAYOUT: {!{ $ctx.layout }!}
+        KUBERNETES_VERSION: "{!{ $ctx.kubernetesVersion }!}"
+        LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
+        LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+        TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+        PREFIX: ${{ github.event.inputs.cluster_prefix }}
+        INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+        DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
+  {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
+
+    - name: Remove failed cluster label
+      if: ${{ success() }}
+      uses: actions-ecosystem/action-remove-labels@v1
+      with:
+        github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+        number: ${{ needs.git_info.outputs.pr_number }}
+        labels: "e2e/cluster/failed"
+
+    - name: Cleanup temp directory
+      if: always()
+      env:
+        TMPPATH: ${{ steps.setup.outputs.tmppath}}
+      run: |
+        echo "Remove temporary directory '${TMPPATH}' ..."
+        if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+          rm -rf "${TMPPATH}"
+        else
+          echo Not a directory.
+        fi
+
+{!{    tmpl.Exec "update_comment_on_finish" (slice "job,separate" $ctx.jobName) | strings.Indent 4 }!}
 # </template: e2e_run_job_template>
 {!{ end -}!}

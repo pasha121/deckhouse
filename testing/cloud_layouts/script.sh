@@ -104,6 +104,9 @@ ssh_private_key_path=
 ssh_user=
 # IP of master node.
 master_ip=
+# bootstrap log
+bootstrap_log="${DHCTL_LOG_FILE}"
+terraform_state_file="/tmp/static-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.tfstate"
 
 function abort_bootstrap_from_cache() {
   >&2 echo "Run abort_bootstrap_from_cache"
@@ -138,10 +141,11 @@ function destroy_cluster() {
 }
 
 function destroy_static_infra() {
-  >&2 echo "Run destroy_static_infra"
+  >&2 echo "Run destroy_static_infra from ${terraform_state_file}"
 
   pushd "$cwd"
-  terraform destroy -input=false -auto-approve || exitCode=$?
+  terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
+  terraform destroy -state="${terraform_state_file}" -input=false -auto-approve || exitCode=$?
   popd
 
   return $exitCode
@@ -155,7 +159,7 @@ function cleanup() {
   fi
 
   # Check if 'dhctl bootstrap' was not started.
-  if [[ ! -f "$cwd/bootstrap.log" ]] ; then
+  if [[ ! -f "$bootstrap_log" ]] ; then
     >&2 echo "Run cleanup ... no bootstrap.log, no need to cleanup."
     return 0
   fi
@@ -185,6 +189,10 @@ function prepare_environment() {
   if [[ ! -d "$cwd" ]]; then
     >&2 echo "There is no '${LAYOUT}' layout configuration for '${PROVIDER}' provider by path: $cwd"
     return 1
+  fi
+
+  if [ -z "$bootstrap_log" ]; then
+    bootstrap_log="$cwd/bootstrap.log"
   fi
 
   ssh_private_key_path="$cwd/sshkey"
@@ -305,6 +313,8 @@ function prepare_environment() {
     ;;
   esac
 
+  echo -e "\nmaster_user_name_for_ssh = $ssh_user\n" >> "$bootstrap_log"
+
   >&2 echo "Use configuration in directory '$cwd':"
   >&2 ls -la $cwd
 }
@@ -328,7 +338,7 @@ function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
   pushd "$cwd"
   terraform init -input=false -plugin-dir=/usr/local/share/terraform/plugins || return $?
-  terraform apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+  terraform apply -state="${terraform_state_file}" -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   popd
 
   if ! master_ip="$(grep "master_ip_address_for_ssh" "$cwd/terraform.log"| cut -d "=" -f2 | tr -d " ")" ; then
@@ -340,10 +350,12 @@ function bootstrap_static() {
     return 1
   fi
 
+  echo -e "\nmaster_ip_address_for_ssh = $master_ip\n" >> "$bootstrap_log"
+
   # Bootstrap
   >&2 echo "Run dhctl bootstrap ..."
   dhctl bootstrap --yes-i-want-to-drop-cache --ssh-host "$master_ip" --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --config "$cwd/configuration.yaml" --resources "$cwd/resources.yaml" | tee "$cwd/bootstrap.log" || return $?
+  --config "$cwd/configuration.yaml" --resources "$cwd/resources.yaml" | tee -a "$bootstrap_log" || return $?
 
   >&2 echo "==============================================================
 
@@ -410,7 +422,7 @@ ENDSSH
 function bootstrap() {
   >&2 echo "Run dhctl bootstrap ..."
   dhctl bootstrap --yes-i-want-to-drop-cache --ssh-agent-private-keys "$ssh_private_key_path" --ssh-user "$ssh_user" \
-  --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee "$cwd/bootstrap.log" || return $?
+  --resources "$cwd/resources.yaml" --config "$cwd/configuration.yaml" | tee -a "$bootstrap_log" || return $?
 
   if ! master_ip="$(parse_master_ip_from_log)"; then
     return 1
@@ -665,7 +677,7 @@ END_SCRIPT
 
 function parse_master_ip_from_log() {
   >&2 echo "  Detect master_ip from bootstrap.log ..."
-  if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$cwd/bootstrap.log")"; then
+  if ! master_ip="$(grep -Po '(?<=master_ip_address_for_ssh = ).+$' "$bootstrap_log")"; then
     >&2 echo "    ERROR: can't parse master_ip from bootstrap.log"
     return 1
   fi
