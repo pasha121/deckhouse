@@ -35,7 +35,7 @@ const (
 	secretsSnapshot    = "registry_secrets_namespaces"
 	d8RegistrySnapshot = "d8_registry_secret"
 
-	virtRegistrySecretName = "virt-deckhouse-regestry"
+	virtRegistrySecretName = "virt-deckhouse-registry"
 )
 
 type registrySecret struct {

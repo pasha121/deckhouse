@@ -7,7 +7,7 @@ index 75749b08d..17fdc6e89 100644
  	}
  
 +	imagePullSecrets = append(imagePullSecrets, k8sv1.LocalObjectReference{
-+		Name: "virt-deckhouse-regestry",
++		Name: "virt-deckhouse-registry",
 +	})
 +
  	// Pad the virt-launcher grace period.
@@ -18,7 +18,7 @@ index 75749b08d..17fdc6e89 100644
  				},
  			},
 +			ImagePullSecrets: []k8sv1.LocalObjectReference{{
-+				Name: "virt-deckhouse-regestry",
++				Name: "virt-deckhouse-registry",
 +			}},
  			Affinity: &k8sv1.Affinity{
  				NodeAffinity: &k8sv1.NodeAffinity{
