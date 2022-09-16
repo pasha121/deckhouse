@@ -7,7 +7,7 @@ to images bundle target.
 
 - https://github.com/kubevirt/kubevirt/pull/8390
 
-## `002-deckhouse-regestry.patch`
+## `002-deckhouse-registry.patch`
 
 Internal patch which adds deckhouse ImagePullSecrets to kubevirt VMs
 
