@@ -20,7 +20,7 @@ var _ = Describe("Modules :: istio :: hooks :: generate_password ", func() {
 	var (
 		hook = generate_password.NewBasicAuthPlainHook(moduleValuesKey, authSecretNS, authSecretName)
 
-		testPassword    = "t3stPassw0rd"
+		testPassword    = generate_password.GeneratePassword()
 		testPasswordB64 = base64.StdEncoding.EncodeToString([]byte(
 			fmt.Sprintf("admin:{PLAIN}%s", testPassword),
 		))
@@ -90,7 +90,7 @@ data:
 		})
 	})
 
-	Context("with password in Secret", func() {
+	Context("with generated password in Secret", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(nsManifest + authSecretManifest)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())

@@ -31,7 +31,7 @@ var _ = Describe("Modules :: dashboard :: hooks :: generate_password", func() {
 	var (
 		hook = generate_password.NewBasicAuthPlainHook(moduleValuesKey, authSecretNS, authSecretName)
 
-		testPassword    = "t3stPassw0rd"
+		testPassword    = generate_password.GeneratePassword()
 		testPasswordB64 = base64.StdEncoding.EncodeToString([]byte(
 			fmt.Sprintf("admin:{PLAIN}%s", testPassword),
 		))
