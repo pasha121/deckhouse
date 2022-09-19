@@ -18,13 +18,13 @@ package template_tests
 
 import (
 	"encoding/base64"
-	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {

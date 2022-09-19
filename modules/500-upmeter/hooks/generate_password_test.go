@@ -71,7 +71,7 @@ data:
   auth: ` + base64.StdEncoding.EncodeToString([]byte("admin:{PLAIN}"+a.password)) + "\n"
 }
 
-var _ = FDescribe("Modules :: upmeter :: hooks :: generate_password", func() {
+var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 	testSettings := make(map[string]*appTestSettings)
 	for secretName, appName := range upmeterApps {
 		settings := &appTestSettings{
