@@ -110,13 +110,6 @@ var _ = Describe("Flant integration :: hooks :: license ::", func() {
 		)
 
 		var (
-			nsManifest = `
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ` + revokedCMNamespace + "\n"
-
 			revokedCMManifest = `
 ---
 apiVersion: v1
@@ -166,7 +159,7 @@ metadata:
 			}
 
 			BeforeEach(func() {
-				f.KubeStateSet(nsManifest + revokedCMManifest)
+				f.KubeStateSet(revokedCMManifest)
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.ConfigValuesSet(licenseKeyPath, "")
 				f.ValuesSet(globalRegistryPath, "test.repo")

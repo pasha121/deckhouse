@@ -181,6 +181,7 @@ func (h *Hook) restoreGeneratedPasswordFromSnapshot(snapshot []go_hook.FilterRes
 		return "", fmt.Errorf("secret/%s has %s field with malformed basic auth plain password", h.Secret.Name, defaultBasicAuthPlainField)
 	}
 
+	// There is no way to detect generated password except its length.
 	pass := strings.TrimSpace(parts[1])
 	if len(pass) != generatedPasswdLength {
 		return "", fmt.Errorf("secret/%s has %s field with custom password", h.Secret.Name, defaultBasicAuthPlainField)

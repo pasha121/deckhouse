@@ -38,15 +38,6 @@ type appTestSettings struct {
 	passwordInternalValuesPath string
 }
 
-func (a *appTestSettings) NsManifest() string {
-	return `
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ` + upmeterNS + "\n"
-}
-
 func (a *appTestSettings) GeneratedSecret() string {
 	return `
 ---
@@ -124,7 +115,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 
 			Context("with auth.password in configuration and password in Secret", func() {
 				BeforeEach(func() {
-					f.KubeStateSet(settings.NsManifest() + settings.GeneratedSecret())
+					f.KubeStateSet(settings.GeneratedSecret())
 					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 					f.ConfigValuesSet(settings.passwordValuesPath, settings.password)
 					f.RunHook()
@@ -152,7 +143,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 
 			Context("without auth, with generated password in Secret", func() {
 				BeforeEach(func() {
-					f.KubeStateSet(settings.NsManifest() + settings.GeneratedSecret())
+					f.KubeStateSet(settings.GeneratedSecret())
 					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 					// Set internal value to emulate editing auth field by user.
 					f.ValuesSet(settings.passwordInternalValuesPath, "not-a-test-password")
@@ -166,7 +157,7 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 
 			Context("without auth, with custom password in Secret", func() {
 				BeforeEach(func() {
-					f.KubeStateSet(settings.NsManifest() + settings.CustomSecret())
+					f.KubeStateSet(settings.CustomSecret())
 					f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 					// Set internal value to emulate editing auth field by user.
 					f.ValuesSet(settings.passwordInternalValuesPath, "not-a-test-password")
@@ -182,7 +173,6 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 			})
 
 		})
-
 	}
 
 	Context("all apps", func() {
@@ -252,13 +242,11 @@ var _ = Describe("Modules :: upmeter :: hooks :: generate_password", func() {
 
 		Context("with generated passwords in Secrets", func() {
 			BeforeEach(func() {
-				nsManifest := ""
 				secrets := ""
 				for _, settings := range testSettings {
-					nsManifest = settings.NsManifest()
 					secrets += settings.GeneratedSecret()
 				}
-				f.KubeStateSet(nsManifest + secrets)
+				f.KubeStateSet(secrets)
 				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 				f.RunHook()
 			})

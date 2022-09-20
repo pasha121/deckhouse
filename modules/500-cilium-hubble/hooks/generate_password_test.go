@@ -36,14 +36,6 @@ var _ = Describe("Modules :: cilium-hubble :: hooks :: generate_password", func(
 			fmt.Sprintf("admin:{PLAIN}%s", testPassword),
 		))
 
-		// Namespace should be created before creating the Secret.
-		nsManifest = `
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: ` + authSecretNS + "\n"
-
 		// Secret with password.
 		authSecretManifest = `
 ---
@@ -103,7 +95,7 @@ data:
 
 	Context("with password in Secret", func() {
 		BeforeEach(func() {
-			f.KubeStateSet(nsManifest + authSecretManifest)
+			f.KubeStateSet(authSecretManifest)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet(hook.PasswordKey(), "not-a-test-password")
 			f.RunHook()

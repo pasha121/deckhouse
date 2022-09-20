@@ -110,42 +110,42 @@ func generatePassword(input *go_hook.HookInput) error {
 func restorePasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error) {
 	// Only one Secret is expected.
 	if len(snapshot) != 1 {
-		return "", fmt.Errorf("no Secret")
+		return "", fmt.Errorf("secret/%s not found", secretName)
 	}
 
 	secretData, ok := snapshot[0].(map[string][]byte)
 	if !ok {
-		return "", fmt.Errorf("secret has empty data")
+		return "", fmt.Errorf("secret/%s has empty data", secretName)
 	}
 	// Only one field is expected.
 	if len(secretData) != 1 {
-		return "", fmt.Errorf("secret has many fields")
+		return "", fmt.Errorf("secret/%s has many fields", secretName)
 	}
 
 	// Expect htpasswd field is present.
 	htpasswdBytes, ok := secretData["htpasswd"]
 	if !ok {
-		return "", fmt.Errorf("secret has no htpasswd field")
+		return "", fmt.Errorf("secret/%s has no htpasswd field", secretName)
 	}
 	htpasswd := string(htpasswdBytes)
 
 	// Expect only one user-password pair.
 	if strings.Count(htpasswd, "{PLAIN}") != 1 {
-		return "", fmt.Errorf("secret has many users in htpasswd field")
+		return "", fmt.Errorf("secret/%s has many users in htpasswd field", secretName)
 	}
 
 	userPrefix := defaultUserName + ":{PLAIN}"
 	if strings.Count(htpasswd, userPrefix) != 1 {
-		return "", fmt.Errorf("secret has no password for %s user", defaultUserName)
+		return "", fmt.Errorf("secret/%s has no password for %s user", secretName, defaultUserName)
 	}
 
 	// Extract password.
 	cleaned := strings.TrimSpace(htpasswd)
 	pass := strings.TrimPrefix(cleaned, defaultUserName+":{PLAIN}")
 
-	// Expect password length is sufficient.
-	if len(pass) < generatedPasswdLength {
-		return "", fmt.Errorf("password length is too low for user %s", defaultUserName)
+	// There is no way to detect generated password except its length.
+	if len(pass) != generatedPasswdLength {
+		return "", fmt.Errorf("secret/%s has custom password for %s user", secretName, defaultUserName)
 	}
 	return pass, nil
 }
