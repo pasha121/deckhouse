@@ -6,15 +6,6 @@ properties:
     type: object
     default: {}
     properties:
-      deckhouseReleaseChannel:
-        type: string
-        default: "unknown"
-      deckhouseEdition:
-        type: string
-        default: "unknown"
-      deckhouseVersion:
-        type: string
-        default: "unknown"
       deployDexAuthenticator:
         type: boolean
         x-examples: [true, false]
