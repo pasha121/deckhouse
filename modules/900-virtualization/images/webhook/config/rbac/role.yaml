@@ -1,0 +1,59 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ipaddressreservations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ipaddressreservations/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ipaddressreservations/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - virtualmachines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - virtualmachines/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - virtualmachines/status
+  verbs:
+  - get
+  - patch
+  - update
