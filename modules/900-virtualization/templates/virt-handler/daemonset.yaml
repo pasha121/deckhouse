@@ -3,23 +3,23 @@
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: virt-api
-  namespace: d8-kubevirt
+  name: virt-handler
+  namespace: d8-virt-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
-    kind: Deployment
-    name: virt-api
+    kind: DaemonSet
+    name: virt-handler
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
-    - containerName: virt-api
+    - containerName: virt-handler
       minAllowed:
         cpu: 10m
-        memory: 150Mi
+        memory: 230Mi
       maxAllowed:
         cpu: 20m
-        memory: 250Mi
+        memory: 400Mi
 {{- end }}

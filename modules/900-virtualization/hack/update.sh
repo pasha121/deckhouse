@@ -33,13 +33,13 @@ awk -v RS="\n---\n" '/\nkind: CustomResourceDefinition\n/ {print "---\n" $0}' "$
   awk -v RS='\n---\n' '/\nkind: RoleBinding\n/ {print "---\n" $0}' "$manifest" | \
     sed -z 's/\(\nmetadata:\n\([- ] [^\n]*\n\)\+  name:\) [^\n]*/\1 kubevirt-operator/'
   awk -v RS='\n---\n' '/\nkind: ClusterRole\n.*\n  name: kubevirt-operator\n/ {print "---\n" $0}' "$manifest" | \
-    sed -z 's/\(\nmetadata:\n\([- ] [^\n]*\n\)\+  name:\) [^\n]*/\1 d8:kubevirt:kubevirt-operator/'
+    sed -z 's/\(\nmetadata:\n\([- ] [^\n]*\n\)\+  name:\) [^\n]*/\1 d8:virtualization:kubevirt-operator/'
   awk -v RS='\n---\n' '/\nkind: ClusterRoleBinding\n/ {print "---\n" $0}' "$manifest" | \
-    sed -z 's/\(\nmetadata:\n\([- ] [^\n]*\n\)\+  name:\) [^\n]*/\1 d8:kubevirt:kubevirt-operator/' | \
-    sed -z 's/\(\nroleRef:\n\([- ] [^\n]*\n\)\+  name:\) [^\n]*/\1 d8:kubevirt:kubevirt-operator/'
+    sed -z 's/\(\nmetadata:\n\([- ] [^\n]*\n\)\+  name:\) [^\n]*/\1 d8:virtualization:kubevirt-operator/' | \
+    sed -z 's/\(\nroleRef:\n\([- ] [^\n]*\n\)\+  name:\) [^\n]*/\1 d8:virtualization:kubevirt-operator/'
 } > templates/kubevirt-operator/rbac-for-us.yaml
 
-sed -i 's/namespace: kubevirt/namespace: d8-kubevirt/g' \
+sed -i 's/namespace: kubevirt/namespace: d8-virt-system/g' \
   templates/kubevirt-operator/rbac-for-us.yaml
 sed -zi 's/  labels:\n\(    [^\n]*\n\)\+/  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}\n/g' \
   templates/kubevirt-operator/rbac-for-us.yaml

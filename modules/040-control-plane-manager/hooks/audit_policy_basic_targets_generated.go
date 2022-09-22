@@ -21,7 +21,6 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-ingress-nginx",
 	"d8-istio",
 	"d8-keepalived",
-	"d8-kubevirt",
 	"d8-linstor",
 	"d8-local-path-provisioner",
 	"d8-log-shipper",
@@ -37,6 +36,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-upmeter",
 	"d8-user-authn",
 	"d8-user-authz",
+	"d8-virt-system",
 	"kube-system",
 }
 var auditPolicyBasicServiceAccounts = []string{
