@@ -74,5 +74,5 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/810-deckhouse-web/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/900-cdi/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/900-kubevirt/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/900-virtualization/hooks"
 )

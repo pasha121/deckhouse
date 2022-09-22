@@ -44,7 +44,7 @@ type registrySecret struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/kubevirt/registry-secrets",
+	Queue: "/modules/virtualization/registry-secrets",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       vmisSnapshot,

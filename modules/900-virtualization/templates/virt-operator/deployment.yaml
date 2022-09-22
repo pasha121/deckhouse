@@ -24,7 +24,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: virt-operator
-  namespace: d8-kubevirt
+  namespace: d8-virt-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "virt-operator")) | nindent 2 }}
 spec:
   targetRef:
@@ -50,7 +50,7 @@ metadata:
     helm.sh/hook: post-upgrade, post-install
     helm.sh/hook-delete-policy: before-hook-creation
   name: virt-operator
-  namespace: d8-kubevirt
+  namespace: d8-virt-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "virt-operator" )) | nindent 2 }}
 spec:
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
@@ -63,7 +63,7 @@ kind: Deployment
 metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "virt-operator")) | nindent 2 }}
   name: virt-operator
-  namespace: d8-kubevirt
+  namespace: d8-virt-system
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -107,7 +107,7 @@ spec:
         - name: KUBEVIRT_VERSION
           value: {{ include "kubevirt_images" . | sha256sum | trunc 7 }}
         - name: WATCH_NAMESPACE
-          value: d8-kubevirt
+          value: d8-virt-system
         image: {{ include "helm_lib_module_image" (list . "virtOperator") }}
         imagePullPolicy: IfNotPresent
         ports:
