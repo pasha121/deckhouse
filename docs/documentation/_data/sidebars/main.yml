@@ -1058,6 +1058,32 @@ entries:
                 ru: Настройки
               url: /modules/450-network-gateway/configuration.html
     - title:
+        en: Virtualization
+        ru: Виртуализация
+      folders:
+        - title: virtualization
+          d8Revision: ce
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/900-virtualization/
+            - title:
+                en: Usage
+                ru: Примеры
+              url: /modules/900-virtualization/usage.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/900-virtualization/configuration.html
+                - title: Custom Resources
+                  url: /modules/900-virtualization/cr.html
+
+    - title:
         en: Used software
         ru: Используемое ПО
       url: /oss_info.html
