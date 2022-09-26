@@ -32,15 +32,15 @@ spec:
     {{- if ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
     - resourceType: Deployment
       resourceName: virt-api
-      patch: '[{"op":"remove","path":"/spec/template/spec/containers/0/resources/requests"}]'
+      patch: '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/requests","value":{}}]'
       type: json
     - resourceType: Deployment
       resourceName: virt-controller
-      patch: '[{"op":"remove","path":"/spec/template/spec/containers/0/resources/requests"}]'
+      patch: '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/requests","value":{}}]'
       type: json
     - resourceType: DaemonSet
       resourceName: virt-handler
-      patch: '[{"op":"remove","path":"/spec/template/spec/containers/0/resources/requests"}]'
+      patch: '[{"op":"replace","path":"/spec/template/spec/containers/0/resources/requests","value":{}}]'
       type: json
     {{- end }}
   imagePullPolicy: IfNotPresent
