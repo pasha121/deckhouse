@@ -8,6 +8,32 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - clusterimagesources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - clusterimagesources/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - clusterimagesources/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
   - ipaddressreservations
   verbs:
   - create

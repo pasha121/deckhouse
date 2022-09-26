@@ -20,4 +20,11 @@ resources:
   kind: IPAddressReservation
   path: github.com/deckhouse/deckhouse/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: deckhouse.io
+  kind: ClusterImageSource
+  path: github.com/deckhouse/deckhouse/api/v1alpha1
+  version: v1alpha1
 version: "3"

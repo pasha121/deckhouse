@@ -20,37 +20,38 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// IPAddressReservationSpec defines the desired state of IPAddressReservation
-type IPAddressReservationSpec struct {
-	// IP-address for reservation
-	Address string `json:"address,omitempty"`
+// ClusterImageSourceSpec defines the desired state of ClusterImageSource
+type ClusterImageSourceSpec struct {
+	// Source is string used to import Virtual Machine Image
+	Source string `json:"source,omitempty"`
 }
 
-// IPAddressReservationStatus defines the observed state of IPAddressReservation
-type IPAddressReservationStatus struct {
+// ClusterImageSourceStatus defines the observed state of ClusterImageSource
+type ClusterImageSourceStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:scope=Cluster
 
-// IPAddressReservation is the Schema for the ipaddressreservations API
-type IPAddressReservation struct {
+// ClusterImageSource is the Schema for the clusterimagesources API
+type ClusterImageSource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IPAddressReservationSpec   `json:"spec,omitempty"`
-	Status IPAddressReservationStatus `json:"status,omitempty"`
+	Spec   ClusterImageSourceSpec   `json:"spec,omitempty"`
+	Status ClusterImageSourceStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// IPAddressReservationList contains a list of IPAddressReservation
-type IPAddressReservationList struct {
+// ClusterImageSourceList contains a list of ClusterImageSource
+type ClusterImageSourceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []IPAddressReservation `json:"items"`
+	Items           []ClusterImageSource `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&IPAddressReservation{}, &IPAddressReservationList{})
+	SchemeBuilder.Register(&ClusterImageSource{}, &ClusterImageSourceList{})
 }

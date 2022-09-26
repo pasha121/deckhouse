@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k6tv1 "kubevirt.io/api/core/v1"
 )
@@ -40,9 +41,40 @@ type VirtualMachineStatus struct {
 	VMIP string `json:"vmIP,omitempty"`
 }
 
+type ClusterImageSourceSource struct {
+	// Name represents the name of the ClusterImageSource in the same namespace
+	Name string `json:"name"`
+	// Hotpluggable indicates whether the volume can be hotplugged and hotunplugged.
+	// +optional
+	Hotpluggable bool `json:"hotpluggable,omitempty"`
+	// Will be used to create a stand-alone PVC to provision the volume.
+	VolumeClaimTemplate v1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
+}
+
+type ImageSourceSource struct {
+	// Name represents the name of the ImageSource in the same namespace
+	Name string `json:"name"`
+	// Hotpluggable indicates whether the volume can be hotplugged and hotunplugged.
+	// +optional
+	Hotpluggable bool `json:"hotpluggable,omitempty"`
+	// Will be used to create a stand-alone PVC to provision the volume.
+	VolumeClaimTemplate v1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
+}
+
 // Represents the source of a volume to mount.
 // Only one of its members may be specified.
 type VolumeSource struct {
+	// Bus indicates the type of disk device to emulate.
+	// supported values: virtio, sata, scsi, usb.
+	Bus k6tv1.DiskBus `json:"bus,omitempty"`
+	// ImageSourceSource represents a reference to a ImageSource in the same namespace.
+	// Directly attached to the vmi via qemu.
+	// +optional
+	ImageSource ClusterImageSourceSource `json:"imageSource,omitempty"`
+	// ClusterImageSourceSource represents a reference to a ClusterImageSource.
+	// Directly attached to the vmi via qemu.
+	// +optional
+	ClusterImageSource ClusterImageSourceSource `json:"clusterImageSource,omitempty"`
 	// PersistentVolumeClaimVolumeSource represents a reference to a PersistentVolumeClaim in the same namespace.
 	// Directly attached to the vmi via qemu.
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
