@@ -4,7 +4,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: vmi-router
-  namespace: d8-virt-system
+  namespace: d8-virtualization
   {{- include "helm_lib_module_labels" (list . (dict "app" "vmi-router")) | nindent 2 }}
 ---
 kind: ClusterRole
@@ -38,7 +38,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: vmi-router
-    namespace: d8-virt-system
+    namespace: d8-virtualization
 roleRef:
   kind: ClusterRole
   name: d8:{{ .Chart.Name }}:vmi-router

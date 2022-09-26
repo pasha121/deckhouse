@@ -39,7 +39,7 @@ awk -v RS="\n---\n" '/\nkind: CustomResourceDefinition\n/ {print "---\n" $0}' "$
     sed -z 's/\(\nroleRef:\n\([- ] [^\n]*\n\)\+  name:\) [^\n]*/\1 d8:virtualization:kubevirt-operator/'
 } > templates/kubevirt-operator/rbac-for-us.yaml
 
-sed -i 's/namespace: kubevirt/namespace: d8-virt-system/g' \
+sed -i 's/namespace: kubevirt/namespace: d8-virtualization/g' \
   templates/kubevirt-operator/rbac-for-us.yaml
 sed -zi 's/  labels:\n\(    [^\n]*\n\)\+/  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}\n/g' \
   templates/kubevirt-operator/rbac-for-us.yaml

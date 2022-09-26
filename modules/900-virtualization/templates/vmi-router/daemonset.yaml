@@ -9,7 +9,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: vmi-router
-  namespace: d8-virt-system
+  namespace: d8-virtualization
   {{- include "helm_lib_module_labels" (list . (dict "app" "vmi-router" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
 spec:
   targetRef:
@@ -32,7 +32,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: vmi-router
-  namespace: d8-virt-system
+  namespace: d8-virtualization
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 spec:
   selector:
