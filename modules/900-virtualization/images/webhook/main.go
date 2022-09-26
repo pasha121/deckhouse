@@ -96,18 +96,32 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "VirtualMachine")
 		os.Exit(1)
 	}
-	if err = (&controllers.IPAddressReservationReconciler{
+	if err = (&controllers.IPAddressLeaseReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "IPAddressReservation")
+		setupLog.Error(err, "unable to create controller", "controller", "IPAddressLease")
 		os.Exit(1)
 	}
-	if err = (&controllers.ClusterImageSourceReconciler{
+	if err = (&controllers.PublicImageSourceReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ClusterImageSource")
+		setupLog.Error(err, "unable to create controller", "controller", "PublicImageSource")
+		os.Exit(1)
+	}
+	if err = (&controllers.DiskTypeReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "DiskType")
+		os.Exit(1)
+	}
+	if err = (&controllers.DiskReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Disk")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

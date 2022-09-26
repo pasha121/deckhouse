@@ -17,14 +17,29 @@ resources:
     namespaced: true
   controller: true
   domain: deckhouse.io
-  kind: IPAddressReservation
+  kind: IPAddressLease
   path: github.com/deckhouse/deckhouse/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
   controller: true
   domain: deckhouse.io
-  kind: ClusterImageSource
+  kind: PublicImageSource
+  path: github.com/deckhouse/deckhouse/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: deckhouse.io
+  kind: DiskType
+  path: github.com/deckhouse/deckhouse/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: deckhouse.io
+  kind: Disk
   path: github.com/deckhouse/deckhouse/api/v1alpha1
   version: v1alpha1
 version: "3"

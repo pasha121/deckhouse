@@ -24,11 +24,14 @@ import (
 
 // VirtualMachineSpec defines the desired state of VirtualMachine
 type VirtualMachineSpec struct {
-	Running                  *bool                         `json:"running,omitempty" optional:"true"`
-	IPAddressReservationName *string                       `json:"IPAddressReservationName,omitempty"`
-	CloudInit                *k6tv1.CloudInitNoCloudSource `json:"cloudInit,omitempty"`
-	Resources                *k6tv1.ResourceRequirements   `json:"resources,omitempty"`
-	Disks                    *[]VolumeSource               `json:"disks,omitempty"`
+	Running         *bool                         `json:"running,omitempty" optional:"true"`
+	StaticIPAddress *string                       `json:"staticIPAddress,omitempty"`
+	Resources       v1.ResourceList               `json:"resources,omitempty"`
+	UserName        *string                       `json:"userName,omitempty"`
+	SSHPublicKey    *string                       `json:"sshPublicKey,omitempty"`
+	BootDisk        BootDisk                      `json:"bootDisk,omitempty"`
+	CloudInit       *k6tv1.CloudInitNoCloudSource `json:"cloudInit,omitempty"`
+	Disks           *[]DiskSource                 `json:"disks,omitempty"`
 }
 
 // VirtualMachineStatus defines the observed state of VirtualMachine
@@ -41,63 +44,56 @@ type VirtualMachineStatus struct {
 	VMIP string `json:"vmIP,omitempty"`
 }
 
-type ClusterImageSourceSource struct {
-	// Name represents the name of the ClusterImageSource in the same namespace
-	Name string `json:"name"`
-	// Hotpluggable indicates whether the volume can be hotplugged and hotunplugged.
-	// +optional
-	Hotpluggable bool `json:"hotpluggable,omitempty"`
-	// Will be used to create a stand-alone PVC to provision the volume.
-	VolumeClaimTemplate v1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
-}
-
-type ImageSourceSource struct {
-	// Name represents the name of the ImageSource in the same namespace
-	Name string `json:"name"`
-	// Hotpluggable indicates whether the volume can be hotplugged and hotunplugged.
-	// +optional
-	Hotpluggable bool `json:"hotpluggable,omitempty"`
-	// Will be used to create a stand-alone PVC to provision the volume.
-	VolumeClaimTemplate v1.PersistentVolumeClaim `json:"volumeClaimTemplate,omitempty"`
-}
-
-// Represents the source of a volume to mount.
+// Represents the source of a boot disk
 // Only one of its members may be specified.
-type VolumeSource struct {
+type BootDisk struct {
+	// Represents the source of image used to create disk
+	// +optional
+	Image ImageSource `json:"image,omitempty"`
+	// Represents the source of existing disk
+	// +optional
+	Disk DiskSource `json:"disk,omitempty"`
+}
+
+// Represents the source of image used to create disk
+type ImageSource struct {
+	DiskSpec `json:""`
+	// Name represents the name of the Image
+	Name string `json:"name"`
+	// Scope represents the source of Image
+	// supported values: global, private
+	Scope ImageSourceScope `json:"scope,omitempty"`
+	// Type represents the type for newly created disk
+	Ephemeral bool `json:"ephemeral,omitempty"`
 	// Bus indicates the type of disk device to emulate.
 	// supported values: virtio, sata, scsi, usb.
 	Bus k6tv1.DiskBus `json:"bus,omitempty"`
-	// ImageSourceSource represents a reference to a ImageSource in the same namespace.
-	// Directly attached to the vmi via qemu.
+}
+
+// ImageSourceScope represents the source of the image.
+// +enum
+type ImageSourceScope string
+
+const (
+	// ImageSourceScopeGlobal indicates that disk should be
+	// created from global image. This is the default mode.
+	ImageSourceScopeGlobal ImageSourceScope = "global"
+
+	// ImageSourceScopePrivate indicates that disk should be
+	// created from private image from the same namespace.
+	ImageSourceScopePrivate ImageSourceScope = "private"
+)
+
+// Represents the source of existing disk
+type DiskSource struct {
+	// Name represents the name of the Disk in the same namespace
+	Name string `json:"name"`
+	// Hotpluggable indicates whether the volume can be hotplugged and hotunplugged.
 	// +optional
-	ImageSource ClusterImageSourceSource `json:"imageSource,omitempty"`
-	// ClusterImageSourceSource represents a reference to a ClusterImageSource.
-	// Directly attached to the vmi via qemu.
-	// +optional
-	ClusterImageSource ClusterImageSourceSource `json:"clusterImageSource,omitempty"`
-	// PersistentVolumeClaimVolumeSource represents a reference to a PersistentVolumeClaim in the same namespace.
-	// Directly attached to the vmi via qemu.
-	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims
-	// +optional
-	PersistentVolumeClaim *k6tv1.PersistentVolumeClaimVolumeSource `json:"persistentVolumeClaim,omitempty"`
-	// ContainerDisk references a docker image, embedding a qcow or raw disk.
-	// More info: https://kubevirt.gitbooks.io/user-guide/registry-disk.html
-	// +optional
-	ContainerDisk *k6tv1.ContainerDiskSource `json:"containerDisk,omitempty"`
-	// Ephemeral is a special volume source that "wraps" specified source and provides copy-on-write image on top of it.
-	// +optional
-	Ephemeral *k6tv1.EphemeralVolumeSource `json:"ephemeral,omitempty"`
-	// EmptyDisk represents a temporary disk which shares the vmis lifecycle.
-	// More info: https://kubevirt.gitbooks.io/user-guide/disks-and-volumes.html
-	// +optional
-	EmptyDisk *k6tv1.EmptyDiskSource `json:"emptyDisk,omitempty"`
-	// DataVolume represents the dynamic creation a PVC for this volume as well as
-	// the process of populating that PVC with a disk image.
-	// +optional
-	DataVolume *k6tv1.DataVolumeSource `json:"dataVolume,omitempty"`
-	// ConfigMapSource represents a reference to a ConfigMap in the same namespace.
-	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
-	// +optional
+	Hotpluggable bool `json:"hotpluggable,omitempty"`
+	// Bus indicates the type of disk device to emulate.
+	// supported values: virtio, sata, scsi, usb.
+	Bus k6tv1.DiskBus `json:"bus,omitempty"`
 }
 
 //+kubebuilder:object:root=true

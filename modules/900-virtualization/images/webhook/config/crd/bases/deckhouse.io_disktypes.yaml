@@ -5,21 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
   creationTimestamp: null
-  name: clusterimagesources.deckhouse.io
+  name: disktypes.deckhouse.io
 spec:
   group: deckhouse.io
   names:
-    kind: ClusterImageSource
-    listKind: ClusterImageSourceList
-    plural: clusterimagesources
-    singular: clusterimagesource
+    kind: DiskType
+    listKind: DiskTypeList
+    plural: disktypes
+    singular: disktype
   scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: ClusterImageSource is the Schema for the clusterimagesources
-          API
+        description: DiskType is the Schema for the disktypes API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,14 +33,26 @@ spec:
           metadata:
             type: object
           spec:
-            description: ClusterImageSourceSpec defines the desired state of ClusterImageSource
+            description: DiskTypeSpec defines the desired state of DiskType
             properties:
-              source:
-                description: Source is string used to import Virtual Machine Image
+              accessModes:
+                description: 'accessModes contains the desired access modes the volume
+                  should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
+                items:
+                  type: string
+                type: array
+              storageClassName:
+                description: 'storageClassName is the name of the StorageClass required
+                  by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
+                type: string
+              volumeMode:
+                description: volumeMode defines what type of volume is required by
+                  the claim. Value of Filesystem is implied when not included in claim
+                  spec.
                 type: string
             type: object
           status:
-            description: ClusterImageSourceStatus defines the observed state of ClusterImageSource
+            description: DiskTypeStatus defines the observed state of DiskType
             type: object
         type: object
     served: true

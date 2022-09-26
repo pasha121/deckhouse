@@ -20,38 +20,39 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ClusterImageSourceSpec defines the desired state of ClusterImageSource
-type ClusterImageSourceSpec struct {
-	// Source is string used to import Virtual Machine Image
-	Source string `json:"source,omitempty"`
+// IPAddressLeaseSpec defines the desired state of IPAddressLease
+type IPAddressLeaseSpec struct {
+	// IP-address for reservation
+	Address string `json:"address,omitempty"`
+	// Static represents the static lease
+	Static bool `json:"static,omitempty"`
 }
 
-// ClusterImageSourceStatus defines the observed state of ClusterImageSource
-type ClusterImageSourceStatus struct {
+// IPAddressLeaseStatus defines the observed state of IPAddressLease
+type IPAddressLeaseStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
 
-// ClusterImageSource is the Schema for the clusterimagesources API
-type ClusterImageSource struct {
+// IPAddressLease is the Schema for the ipaddressleases API
+type IPAddressLease struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ClusterImageSourceSpec   `json:"spec,omitempty"`
-	Status ClusterImageSourceStatus `json:"status,omitempty"`
+	Spec   IPAddressLeaseSpec   `json:"spec,omitempty"`
+	Status IPAddressLeaseStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// ClusterImageSourceList contains a list of ClusterImageSource
-type ClusterImageSourceList struct {
+// IPAddressLeaseList contains a list of IPAddressLease
+type IPAddressLeaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterImageSource `json:"items"`
+	Items           []IPAddressLease `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ClusterImageSource{}, &ClusterImageSourceList{})
+	SchemeBuilder.Register(&IPAddressLease{}, &IPAddressLeaseList{})
 }

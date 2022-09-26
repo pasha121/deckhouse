@@ -20,37 +20,42 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// IPAddressReservationSpec defines the desired state of IPAddressReservation
-type IPAddressReservationSpec struct {
-	// IP-address for reservation
-	Address string `json:"address,omitempty"`
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// DiskSpec defines the desired state of Disk
+type DiskSpec struct {
+	// Type represents the type for newly created disk
+	Type string `json:"type,omitempty"`
+	// Type represents the size for newly created disk
+	Size string `json:"size"`
 }
 
-// IPAddressReservationStatus defines the observed state of IPAddressReservation
-type IPAddressReservationStatus struct {
+// DiskStatus defines the observed state of Disk
+type DiskStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// IPAddressReservation is the Schema for the ipaddressreservations API
-type IPAddressReservation struct {
+// Disk is the Schema for the disks API
+type Disk struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IPAddressReservationSpec   `json:"spec,omitempty"`
-	Status IPAddressReservationStatus `json:"status,omitempty"`
+	Spec   DiskSpec   `json:"spec,omitempty"`
+	Status DiskStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// IPAddressReservationList contains a list of IPAddressReservation
-type IPAddressReservationList struct {
+// DiskList contains a list of Disk
+type DiskList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []IPAddressReservation `json:"items"`
+	Items           []Disk `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&IPAddressReservation{}, &IPAddressReservationList{})
+	SchemeBuilder.Register(&Disk{}, &DiskList{})
 }

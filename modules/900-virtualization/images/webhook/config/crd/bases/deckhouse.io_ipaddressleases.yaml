@@ -5,21 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
   creationTimestamp: null
-  name: ipaddressreservations.deckhouse.io
+  name: ipaddressleases.deckhouse.io
 spec:
   group: deckhouse.io
   names:
-    kind: IPAddressReservation
-    listKind: IPAddressReservationList
-    plural: ipaddressreservations
-    singular: ipaddressreservation
+    kind: IPAddressLease
+    listKind: IPAddressLeaseList
+    plural: ipaddressleases
+    singular: ipaddresslease
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: IPAddressReservation is the Schema for the ipaddressreservations
-          API
+        description: IPAddressLease is the Schema for the ipaddressleases API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,15 +33,17 @@ spec:
           metadata:
             type: object
           spec:
-            description: IPAddressReservationSpec defines the desired state of IPAddressReservation
+            description: IPAddressLeaseSpec defines the desired state of IPAddressLease
             properties:
               address:
                 description: IP-address for reservation
                 type: string
+              static:
+                description: Static represents the static lease
+                type: boolean
             type: object
           status:
-            description: IPAddressReservationStatus defines the observed state of
-              IPAddressReservation
+            description: IPAddressLeaseStatus defines the observed state of IPAddressLease
             type: object
         type: object
     served: true

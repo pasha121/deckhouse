@@ -1,6 +1,0 @@
-apiVersion: deckhouse.io/v1alpha1
-kind: ClusterImageSource
-metadata:
-  name: clusterimagesource-sample
-spec:
-  # TODO(user): Add fields here

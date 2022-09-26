@@ -27,26 +27,26 @@ import (
 	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/api/v1alpha1"
 )
 
-// IPAddressLeaseReconciler reconciles a IPAddressLease object
-type IPAddressLeaseReconciler struct {
+// DiskReconciler reconciles a Disk object
+type DiskReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=deckhouse.io,resources=ipaddressleases,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=deckhouse.io,resources=ipaddressleases/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=deckhouse.io,resources=ipaddressleases/finalizers,verbs=update
+//+kubebuilder:rbac:groups=deckhouse.io,resources=disks,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=deckhouse.io,resources=disks/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=deckhouse.io,resources=disks/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // TODO(user): Modify the Reconcile function to compare the state specified by
-// the IPAddressLease object against the actual cluster state, and then
+// the Disk object against the actual cluster state, and then
 // perform operations to make the cluster state reflect the state specified by
 // the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
-func (r *IPAddressLeaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *DiskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
@@ -55,8 +55,8 @@ func (r *IPAddressLeaseReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *IPAddressLeaseReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DiskReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&deckhouseiov1alpha1.IPAddressLease{}).
+		For(&deckhouseiov1alpha1.Disk{}).
 		Complete(r)
 }

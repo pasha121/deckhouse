@@ -8,7 +8,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - clusterimagesources
+  - disks
   verbs:
   - create
   - delete
@@ -20,13 +20,13 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - clusterimagesources/finalizers
+  - disks/finalizers
   verbs:
   - update
 - apiGroups:
   - deckhouse.io
   resources:
-  - clusterimagesources/status
+  - disks/status
   verbs:
   - get
   - patch
@@ -34,7 +34,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - ipaddressreservations
+  - disktypes
   verbs:
   - create
   - delete
@@ -46,13 +46,65 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - ipaddressreservations/finalizers
+  - disktypes/finalizers
   verbs:
   - update
 - apiGroups:
   - deckhouse.io
   resources:
-  - ipaddressreservations/status
+  - disktypes/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ipaddressleases
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ipaddressleases/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - ipaddressleases/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - publicimagesources
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - publicimagesources/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - publicimagesources/status
   verbs:
   - get
   - patch
