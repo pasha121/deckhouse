@@ -32,15 +32,7 @@ properties:
               URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
       password:
         description: |
-          Пароль для HTTP-авторизации пользователя `admin`. Пароль генерируется автоматически, если не указан.
-
-          Сгенерированный пароль можно получить командой:
-
-          ```shell
-          kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
-          ```
-
-          Пароль используется, если внешняя аутентификация не включена (см. параметр `externalAuthentication`).
+          Параметр устарел.
       allowedUserGroups:
         description: |
           Список групп, пользователям которых разрешен доступ к web-интерфейсу Hubble.

@@ -52,7 +52,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			// Synchronization is redundant because of OnBeforeHelm.
 			ExecuteHookOnSynchronization: go_hook.Bool(false),
-			ExecuteHookOnEvents:          go_hook.Bool(false),
 			FilterFunc:                   filterAuthSecret,
 		},
 	},
@@ -68,7 +67,6 @@ const (
 	webuiSecretName   = "basic-auth-webui"
 
 	externalAuthValuesTmpl     = "upmeter.auth.%s.externalAuthentication"
-	passwordValuesTmpl         = "upmeter.auth.%s.password"
 	passwordInternalValuesTmpl = "upmeter.internal.auth.%s.password"
 
 	generatedPasswdLength = 20
@@ -103,7 +101,6 @@ func filterAuthSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 func restoreOrGeneratePassword(input *go_hook.HookInput) error {
 	for secretName, appName := range upmeterApps {
 		externalAuthValuesPath := fmt.Sprintf(externalAuthValuesTmpl, appName)
-		passwordValuesPath := fmt.Sprintf(passwordValuesTmpl, appName)
 		passwordInternalValuesPath := fmt.Sprintf(passwordInternalValuesTmpl, appName)
 
 		// Clear password from internal values if an external authentication is enabled.
@@ -112,16 +109,7 @@ func restoreOrGeneratePassword(input *go_hook.HookInput) error {
 			continue
 		}
 
-		// Try to set password from config values.
-		password, ok := input.ConfigValues.GetOk(passwordValuesPath)
-		if ok {
-			input.Values.Set(passwordInternalValuesPath, password.String())
-			continue
-		}
-
-		// No password set in config values. Try to restore generated password from the Secret.
-		// Generate new password if no Secret or Secret has password that is not a generated one.
-
+		// Try to restore generated password from the Secret, or generate a new one.
 		pass, err := restoreGeneratedPasswordFromSnapshot(input.Snapshots[authSecretBinding], secretName)
 		if err != nil {
 			input.LogEntry.Infof("No password for '%s' in config values, generate new one: %s", appName, err)
@@ -174,12 +162,7 @@ func restoreGeneratedPasswordFromSnapshot(snapshot []go_hook.FilterResult, secre
 	if len(parts) != 2 {
 		return "", fmt.Errorf("secret/%s has %s field with malformed basic auth plain password", secretName, authSecretField)
 	}
-
-	// There is no way to detect generated password except its length.
 	pass := strings.TrimSpace(parts[1])
-	if len(pass) != generatedPasswdLength {
-		return "", fmt.Errorf("secret/%s has %s field with custom password", secretName, authSecretField)
-	}
 
 	return pass, nil
 }

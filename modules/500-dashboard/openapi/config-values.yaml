@@ -38,15 +38,7 @@ properties:
       password:
         type: string
         description: |
-          The password for HTTP authorization of the `admin` user. Leave empty to autogenerate.
-
-          Use kubectl to reveal generated password:
-
-          ```shell
-          kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values dashboard -o json | jq '.dashboard.internal.auth.password'
-          ```
-
-          This parameter is used if the `externalAuthentication` is not enabled.
+          Deprecated.
       whitelistSourceRanges:
         type: array
         items:

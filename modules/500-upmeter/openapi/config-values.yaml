@@ -47,15 +47,7 @@ properties:
           password:
             type: string
             description: |
-              The password for HTTP authorization of the `admin` user. Leave empty to autogenerate.
-
-              Use kubectl to reveal generated password:
-
-              ```shell
-              kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
-              ```
-
-              This parameter is used if the `externalAuthentication` is not enabled.
+              Deprecated.
           allowedUserGroups:
             type: array
             items:
@@ -97,15 +89,7 @@ properties:
           password:
             type: string
             description: |
-              The password for HTTP authorization of the `admin` user. Leave empty to autogenerate.
-
-              Use kubectl to reveal generated password:
-
-              ```shell
-              kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
-              ```
-
-              This parameter is used if the `externalAuthentication` is not enabled.
+              Deprecated.
           allowedUserGroups:
             type: array
             items:

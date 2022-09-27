@@ -28,15 +28,7 @@ properties:
                   URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
           password:
             description: |
-              Пароль для HTTP-авторизации пользователя `admin`. Пароль генерируется автоматически, если не указан.
-
-              Сгенерированный пароль можно получить командой:
-
-              ```shell
-              kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
-              ```
-
-              Пароль используется, если внешняя аутентификация не включена (см. параметр `externalAuthentication`).
+              Параметр устарел.
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.
@@ -64,15 +56,7 @@ properties:
                   URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP отличный от 200).
           password:
             description: |
-              Пароль для HTTP-авторизации пользователя `admin`. Пароль генерируется автоматически, если не указан.
-
-              Сгенерированный пароль можно получить командой:
-
-              ```shell
-              kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
-              ```
-
-              Пароль используется, если внешняя аутентификация не включена (см. параметр `externalAuthentication`).
+              Параметр устарел.
           allowedUserGroups:
             description: |
               Группы доступа к просмотру интерфейса приложения.

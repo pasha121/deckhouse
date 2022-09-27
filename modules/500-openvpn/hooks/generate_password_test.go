@@ -52,7 +52,7 @@ data:
 		`{"openvpn":{"internal":{"auth": {}}}}`,
 		`{"openvpn":{}}`)
 
-	Context("with no auth settings", func() {
+	Context("giving no Secret", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -64,44 +64,56 @@ data:
 		})
 	})
 
-	Context("with password in configuration", func() {
-		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ConfigValuesSet(hook.PasswordKey(), testPassword)
-			f.RunHook()
-		})
-		It("should set password from configuration", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(hook.PasswordInternalKey()).String()).Should(BeEquivalentTo(testPassword))
-		})
-	})
-
-	Context("with external auth", func() {
+	Context("giving external auth configuration", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSetFromYaml(hook.ExternalAuthKey(), []byte(`{"authURL": "test"}`))
+			f.ValuesSet(hook.PasswordInternalKey(), []byte(`password`))
 			f.RunHook()
 		})
 		It("should clean password from values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet(hook.PasswordKey()).String()).Should(BeEmpty())
-			Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse())
+			Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse(), "should delete internal value")
 		})
 	})
 
-	Context("with password in Secret", func() {
+	Context("giving password in Secret", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(authSecretManifest)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.ValuesSet(hook.PasswordKey(), "not-a-test-password")
 			f.RunHook()
 		})
-		It("should set password from Secret", func() {
+		It("should set password value from Secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(hook.PasswordInternalKey()).String()).Should(BeEquivalentTo(testPassword))
 		})
+
+		Context("giving Secret is deleted", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(""))
+				f.RunHook()
+			})
+			It("should generate new password value", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				pass := f.ValuesGet(hook.PasswordInternalKey()).String()
+				Expect(pass).ShouldNot(BeEquivalentTo(testPassword))
+				Expect(pass).ShouldNot(BeEmpty())
+			})
+		})
+
+		Context("giving external auth configuration", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+				f.ValuesSetFromYaml(hook.ExternalAuthKey(), []byte(`{"authURL": "test"}`))
+				f.RunHook()
+			})
+			It("should clean password from values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(f.ValuesGet(hook.PasswordInternalKey()).Exists()).Should(BeFalse(), "should delete internal value")
+			})
+		})
+
 	})
 
 })

@@ -54,17 +54,8 @@ properties:
             description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
       password:
         type: string
-        format: password
         description: |
-          The password for HTTP authorization of the `admin` user. Leave empty to autogenerate.
-
-          Use kubectl to reveal generated password:
-
-          ```shell
-          kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
-          ```
-
-          This parameter is used if the `externalAuthentication` is not enabled.
+          Deprecated.
       allowedUserGroups:
         type: array
         items:
