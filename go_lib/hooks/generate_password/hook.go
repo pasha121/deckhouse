@@ -70,7 +70,6 @@ func RegisterHook(moduleValuesPath string, ns string, secretName string) bool {
 				},
 				// Synchronization is redundant because of OnBeforeHelm.
 				ExecuteHookOnSynchronization: go_hook.Bool(false),
-				ExecuteHookOnEvents:          go_hook.Bool(false),
 				FilterFunc:                   hook.Filter,
 			},
 		},
@@ -103,11 +102,10 @@ func (h *Hook) Filter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 // Handle restores password from the configuration or from the Secret and
 // puts it to internal values.
-// It generates new password if no password found in the configuration and the
-// Secret or no externalAuthentication defined.
+// It generates new password if there is no password in the configuration
+// and no Secret found.
 func (h *Hook) Handle(input *go_hook.HookInput) error {
 	externalAuthKey := h.ExternalAuthKey()
-	passwordKey := h.PasswordKey()
 	passwordInternalKey := h.PasswordInternalKey()
 
 	// Clear password from internal values if an external authentication is enabled.
@@ -116,19 +114,10 @@ func (h *Hook) Handle(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	// Try to set password from config values.
-	password, ok := input.ConfigValues.GetOk(passwordKey)
-	if ok {
-		input.Values.Set(passwordInternalKey, password.String())
-		return nil
-	}
-
-	// No password set in config values. Try to restore generated password from the Secret.
-	// Generate new password if no Secret or Secret has password that is not a generated one.
-
+	// Try to restore generated password from the Secret, or generate a new one.
 	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.Snapshots[secretBindingName])
 	if err != nil {
-		input.LogEntry.Infof("No password in config values, generate new one: %s", err)
+		input.LogEntry.Infof("No password in Secret, generate new one: %s", err)
 		pass = GeneratePassword()
 	}
 
@@ -180,12 +169,7 @@ func (h *Hook) restoreGeneratedPasswordFromSnapshot(snapshot []go_hook.FilterRes
 	if len(parts) != 2 {
 		return "", fmt.Errorf("secret/%s has %s field with malformed basic auth plain password", h.Secret.Name, defaultBasicAuthPlainField)
 	}
-
-	// There is no way to detect generated password except its length.
 	pass := strings.TrimSpace(parts[1])
-	if len(pass) != generatedPasswdLength {
-		return "", fmt.Errorf("secret/%s has %s field with custom password", h.Secret.Name, defaultBasicAuthPlainField)
-	}
 
 	return pass, nil
 }

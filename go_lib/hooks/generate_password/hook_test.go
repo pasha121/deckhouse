@@ -49,8 +49,8 @@ func TestRestoreGeneratedPassword(t *testing.T) {
 			[]go_hook.FilterResult{map[string][]byte{
 				defaultBasicAuthPlainField: []byte("admin:{PLAIN}pass"),
 			}},
-			"",
-			expectError,
+			"pass",
+			expectNoError,
 		},
 		{
 			"no PLAIN marker",
