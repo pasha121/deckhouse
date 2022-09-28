@@ -36,7 +36,7 @@ var auditPolicyBasicNamespaces = []string{
 	"d8-upmeter",
 	"d8-user-authn",
 	"d8-user-authz",
-	"d8-virt-system",
+	"d8-virtualization",
 	"kube-system",
 }
 var auditPolicyBasicServiceAccounts = []string{

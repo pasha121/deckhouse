@@ -57,7 +57,7 @@ index 7b3e13f44b..f0cfc22738 100644
  
  	veth := &netlink.Veth{
 diff --git a/pkg/ipam/hostscope.go b/pkg/ipam/hostscope.go
-index 7c86293a74..e05cbb4cb0 100644
+index 7c86293a74..d8d366ae7a 100644
 --- a/pkg/ipam/hostscope.go
 +++ b/pkg/ipam/hostscope.go
 @@ -8,7 +8,10 @@ import (
@@ -119,10 +119,10 @@ index 7c86293a74..e05cbb4cb0 100644
 +				if result.IP == nil {
 +					return nil, fmt.Errorf("customer invalid ip: %s. ", pod.Annotations[customPodIpAddr])
 +				}
-+				//err = h.allocator.Allocate(result.IP)
-+				//if err != nil {
-+				//	return nil, fmt.Errorf("customer ip is not avaliable %s: %w", result.IP.String(), err)
-+				//}
++				err = h.allocator.Allocate(result.IP)
++				if err != nil {
++					return nil, fmt.Errorf("customer ip is not avaliable %s: %w", result.IP.String(), err)
++				}
 +				return &result, nil
 +			}
 +		}
@@ -325,3 +325,22 @@ index d52f3d621d..e4f2a7186b 100644
 +	cniTypes.CommonArgs
 +	MAC cniTypes.UnmarshallableString `json:"mac,omitempty"`
 +}
+diff --git a/vendor/github.com/cilium/ipam/service/ipallocator/allocator.go b/vendor/github.com/cilium/ipam/service/ipallocator/allocator.go
+index f08e883d5a..f8c031dc9f 100644
+--- a/vendor/github.com/cilium/ipam/service/ipallocator/allocator.go
++++ b/vendor/github.com/cilium/ipam/service/ipallocator/allocator.go
+@@ -129,10 +129,10 @@ func (r *Range) CIDR() net.IPNet {
+ // or has already been reserved.  ErrFull will be returned if there
+ // are no addresses left.
+ func (r *Range) Allocate(ip net.IP) error {
+-	ok, offset := r.contains(ip)
+-	if !ok {
+-		return &ErrNotInRange{r.net.String()}
+-	}
++	_, offset := r.contains(ip)
++	//if !ok {
++	//	return &ErrNotInRange{r.net.String()}
++	//}
+ 
+ 	allocated, err := r.alloc.Allocate(offset)
+ 	if err != nil {
