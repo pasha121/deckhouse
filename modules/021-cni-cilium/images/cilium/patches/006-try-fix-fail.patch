@@ -1,0 +1,15 @@
+diff --git a/pkg/endpoint/policy.go b/pkg/endpoint/policy.go
+index 0ea4f256e6..68bff5c983 100644
+--- a/pkg/endpoint/policy.go
++++ b/pkg/endpoint/policy.go
+@@ -835,8 +835,8 @@ func (e *Endpoint) UpdateNoTrackRules(annoCB AnnotationsResolverCB) {
+ 	}
+ 
+ 	updateRes := <-ch
+-	regenResult := updateRes.(*EndpointRegenerationResult)
+-	if regenResult.err != nil {
++	regenResult, ok := updateRes.(*EndpointRegenerationResult)
++	if ok && regenResult.err != nil {
+ 		e.getLogger().WithError(regenResult.err).Error("EndpointNoTrackEvent event failed")
+ 	}
+ }
