@@ -45,7 +45,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			// Synchronization is redundant because of OnBeforeHelm.
 			ExecuteHookOnSynchronization: go_hook.Bool(false),
-			ExecuteHookOnEvents:          go_hook.Bool(false),
 			FilterFunc:                   filterHtpasswdSecret,
 		},
 	},
@@ -65,11 +64,11 @@ func filterHtpasswdSecret(obj *unstructured.Unstructured) (go_hook.FilterResult,
 
 const defaultUserName = `admin`
 
-func defaultLocationValues(passwd string) []map[string]interface{} {
+func generateDefaultLocation(password string) []map[string]interface{} {
 	return []map[string]interface{}{
 		{
 			"users": map[string]interface{}{
-				defaultUserName: passwd,
+				defaultUserName: password,
 			},
 			"location": "/",
 		},
@@ -93,16 +92,17 @@ func generatePassword(input *go_hook.HookInput) error {
 		pass = pwgen.AlphaNum(generatedPasswdLength)
 	}
 
-	locations := defaultLocationValues(pass)
+	locations := generateDefaultLocation(pass)
 	input.Values.Set(locationsInternalKey, locations)
 	return nil
 }
 
-// restorePasswordFromSnapshot returns generate password from Secret.
+// restorePasswordFromSnapshot returns generated password for default location from Secret.
 // password is considered generated if:
 // - there is only 1 snapshot
 // - there is only htpasswd field in Secret
 // - there is only one line contains "admin:{PLAIN}" in htpasswd
+//
 // Hook should generate new default location if Secret
 // contains more fields or passwords.
 //
@@ -143,9 +143,5 @@ func restorePasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error
 	cleaned := strings.TrimSpace(htpasswd)
 	pass := strings.TrimPrefix(cleaned, defaultUserName+":{PLAIN}")
 
-	// There is no way to detect generated password except its length.
-	if len(pass) != generatedPasswdLength {
-		return "", fmt.Errorf("secret/%s has custom password for %s user", secretName, defaultUserName)
-	}
 	return pass, nil
 }
