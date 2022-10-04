@@ -1,0 +1,37 @@
+
+
+	// // Fetch list of VMIs
+	// vmiList := virtv1.VirtualMachineInstanceList{}
+	// vmiListRaw, err := clientset.RESTClient().Get().AbsPath("/apis/kubevirt.io/v1/virtualmachineinstances").DoRaw(context.TODO())
+	// if err != nil {
+	// 	logger.Errorf("cannot obtain KubeVirt vmi list: %v\n", err)
+	// }
+
+	// if err := json.Unmarshal(vmiListRaw, &vmiList); err != nil {
+	// 	logger.Errorf("cannot unmarshal KubeVirt vmi list: %v\n", err)
+	// }
+	// for _, vmi := range vmiList.Items {
+	// 	annotations := vmi.GetAnnotations()
+	// 	ip := annotations["cni.cilium.io/ipAddrs"]
+	// 	mac := vmi.Annotations["cni.cilium.io/macAddrs"]
+	// 	fmt.Fprintf(w, "%s\t%s\t%s\t%v\t%v\t%v\n", vmi.Kind, vmi.Name, vmi.Namespace, vmi.Status.Phase, ip, mac)
+	// }
+
+
+// Create VM.deckhouse --> Creates IPAddressLease.deckhouse (only if IP specified)
+//  									 --> Creates VM.kubevirt --> Creates VMI.kubevirt
+//
+// Create VMI.kubevirt --> Checks annotations -->
+// 																								If IP assigned: check if lease is not used and belongs to the same namespace
+// 																								If IP is not assigned: check if it is free and in vmCIDR range
+// 																										If it is used: reject creation
+// 																										If it is not used: Create IPAddressLease object with ownerReference + add to map
+// Create IPAddressLease --> Check if it is free and in vmCIDR range
+// 															If it is used: reject creation
+// 															If it is not used: pass + add to map
+// Remove IPAddressLease --> If not vmi exists. Release the IP
+//                           If vmi exists. Restrict deletion
+
+// List all reserved IPs:
+// 		Load VMIs and read annotations
+// 		Load IPAddressLeases
