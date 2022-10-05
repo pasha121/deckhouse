@@ -71,6 +71,15 @@ apiVersions:
                 description: Instance disk size in gigabytes.
                 example: 20
                 type: integer
+              etcdDisk:
+                type: object
+                properties:
+                  sizeGb:
+                    type: integer
+                    default: 150
+                  type:
+                    type: string
+                    default: gp2
           zones:
             type: array
             items:
