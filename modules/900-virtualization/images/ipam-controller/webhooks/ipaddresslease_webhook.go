@@ -3,7 +3,6 @@ package webhooks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -70,20 +69,19 @@ func (v *ipAddressLeaseValidator) Validate(_ context.Context, ar *kwhmodel.Admis
 		return &kwhvalidating.ValidatorResult{}, nil
 	}
 
-	if ar.Operation == kwhmodel.OperationCreate {
-		if ipAddressLease.Spec.Address != "" {
-			if !isIPAddressInRange(ipAddressLease.Spec.Address) {
-				return &kwhvalidating.ValidatorResult{
-					Valid:   false,
-					Message: "requested IP address is not in range",
-				}, nil
-			}
-			if isIPAddressAllocated(ipAddressLease.Spec.Address) {
-				return &kwhvalidating.ValidatorResult{
-					Valid:   false,
-					Message: "requested IP address is already allocated",
-				}, nil
-			}
+	// Requested specific IP address
+	if ipAddressLease.Spec.Address != "" {
+		if prefixForIP(ipAddressLease.Spec.Address) == "" {
+			return &kwhvalidating.ValidatorResult{
+				Valid:   false,
+				Message: "requested IP address is not in range",
+			}, nil
+		}
+		if isIPAddressAllocated(ipAddressLease.Spec.Address) {
+			return &kwhvalidating.ValidatorResult{
+				Valid:   false,
+				Message: "requested IP address is already allocated",
+			}, nil
 		}
 
 		return &kwhvalidating.ValidatorResult{
@@ -92,36 +90,17 @@ func (v *ipAddressLeaseValidator) Validate(_ context.Context, ar *kwhmodel.Admis
 		}, nil
 	}
 
-	if ar.Operation == kwhmodel.OperationUpdate {
-		// Mutate our object with the required annotations.
-		if ipAddressLease.Spec.Address == "" {
-			return &kwhvalidating.ValidatorResult{}, fmt.Errorf("Not allowed to change spec.address")
-		}
-
-		oldIPAddressLease := d8v1alpha1.IPAddressLease{}
-		if err := json.Unmarshal(ar.OldObjectRaw, &oldIPAddressLease); err != nil {
+	// Requested any IP address
+	oldIPAddressLease := d8v1alpha1.IPAddressLease{}
+	if err := json.Unmarshal(ar.OldObjectRaw, &oldIPAddressLease); err != nil {
+		if oldIPAddressLease.Spec.Address != "" && oldIPAddressLease.Spec.Address != ipAddressLease.Spec.Address {
 			return &kwhvalidating.ValidatorResult{
 				Valid:   false,
-				Message: "cannot unmarshal old IPAddressLease object: %v\n",
+				Message: "Field spec.address is immutable after first assignment: %v\n",
 			}, nil
 		}
-
-		if oldIPAddressLease.Spec.Address != "" {
-			newIPAddressLease := d8v1alpha1.IPAddressLease{}
-			if err := json.Unmarshal(ar.OldObjectRaw, &newIPAddressLease); err != nil {
-				return &kwhvalidating.ValidatorResult{
-					Valid:   false,
-					Message: "cannot unmarshal new IPAddressLease object: %v\n",
-				}, nil
-			}
-			if oldIPAddressLease.Spec.Address != newIPAddressLease.Spec.Address {
-				return &kwhvalidating.ValidatorResult{
-					Valid:   false,
-					Message: "Field spec.address is immutable after first assignment: %v\n",
-				}, nil
-			}
-		}
 	}
+
 	return &kwhvalidating.ValidatorResult{Valid: true}, nil
 }
 
@@ -133,10 +112,6 @@ func isIPAddressAllocated(address string) bool {
 	}
 	IPAM.ReleaseIPFromPrefix(context.TODO(), prefix, ip.IP.String())
 	return false
-}
-
-func isIPAddressInRange(ip string) bool {
-	return prefixForIP(ip) != ""
 }
 
 func prefixForIP(ip string) string {
