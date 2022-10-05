@@ -25,4 +25,6 @@ module "master-node" {
   zones = local.zones
   tags = local.tags
   associate_ssh_accessible_sg = local.bastion_instance != {} ? false : true
+  etcd_volume_size = var.providerClusterConfiguration.masterNodeGroup.etcdDisk.sizeGb
+  etcd_volume_type = var.providerClusterConfiguration.masterNodeGroup.etcdDisk.type
 }

@@ -36,6 +36,14 @@ variable "root_volume_type" {
   type = string
 }
 
+variable "etcd_volume_size" {
+  type = number
+}
+
+variable "etcd_volume_type" {
+  type = string
+}
+
 variable "associate_public_ip_address" {
   type = bool
   default = false
