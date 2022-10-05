@@ -18,9 +18,9 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	d8v1alpha1 "vmi-ipam-webhook/api/v1alpha1"
@@ -34,12 +34,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+var (
+	DelayedObjects []interface{}
+	CacheIsLoaded  bool
+)
+
 type IPAddressLeaseController struct {
 	RESTClient rest.Interface
 	NodeName   string
 	Ipam       goipam.Ipamer
 	Log        kwhlog.Logger
-	Cidrs      []*net.IPNet
+	Prefixes   []*goipam.Prefix
 }
 
 func (c IPAddressLeaseController) Start(ctx context.Context) error {
@@ -73,6 +78,12 @@ func (c IPAddressLeaseController) Start(ctx context.Context) error {
 	}
 	c.Log.Infof("syncronization completed")
 
+	c.Log.Infof("processing new leases (%d)", len(DelayedObjects))
+	CacheIsLoaded = true
+	for _, obj := range DelayedObjects {
+		c.addFunc(obj)
+	}
+
 	c.Log.Infof("starting validation webhook")
 
 	<-ctx.Done()
@@ -88,28 +99,29 @@ func (c IPAddressLeaseController) addFunc(obj interface{}) {
 		// object is not IPAddressLease
 		return
 	}
-
-	if lease.Spec.Address != "" {
-		c.Log.Infof("add %s/%s: %s", lease.Namespace, lease.Name, lease.Spec.Address)
-		_, err = c.Ipam.AcquireSpecificIP(context.TODO(), c.prefixForIP(lease.Spec.Address), lease.Spec.Address)
-		if err != nil {
-			c.Log.Errorf("error allocating ip %s: %+s", lease.Spec.Address, err)
-		}
-		c.Log.Infof("allocated ip %s/%s: %s", lease.Namespace, lease.Name, lease.Spec.Address)
-	} else {
-		ip := new(goipam.IP)
-		for _, cidr := range c.Cidrs {
-			ip, err = c.Ipam.AcquireIP(context.TODO(), cidr.String())
-			if errors.Is(err, goipam.ErrNoIPAvailable) {
-				continue
-			}
-			break
-		}
-		if err != nil {
-			c.Log.Errorf("error allocating ip %s: %+s", lease.Spec.Address, err)
-		}
-		c.Log.Infof("allocated ip %s/%s: %s", lease.Namespace, lease.Name, ip.IP.String())
+	if lease.Spec.Address == "" && !CacheIsLoaded {
+		c.Log.Infof("skip ip request because cache is not yet synced %s/%s", lease.Namespace, lease.Name, lease.Spec.Address)
+		DelayedObjects = append(DelayedObjects, obj)
+		return
 	}
+	c.Log.Infof("add %s/%s: %s", lease.Namespace, lease.Name, lease.Spec.Address)
+
+	var prefix string
+	if lease.Spec.Address != "" {
+		prefix = c.prefixForIP(lease.Spec.Address)
+	} else {
+		prefix = c.availablePrefix()
+	}
+	if prefix == "" {
+		c.Log.Errorf("unable to find prefix for IP %s", lease.Spec.Address)
+		return
+	}
+
+	ip, err := c.Ipam.AcquireSpecificIP(context.TODO(), prefix, lease.Spec.Address)
+	if err != nil {
+		c.Log.Errorf("error allocating ip %s: %+s", lease.Spec.Address, err)
+	}
+	c.Log.Infof("allocated ip %s/%s: %s", lease.Namespace, lease.Name, ip.IP.String())
 }
 func (c IPAddressLeaseController) deleteFunc(obj interface{}) {
 	lease, ok := obj.(*d8v1alpha1.IPAddressLease)
@@ -133,11 +145,29 @@ func (c IPAddressLeaseController) updateFunc(oldObj, newObj interface{}) {
 }
 
 func (c IPAddressLeaseController) prefixForIP(ip string) string {
-	x := net.ParseIP(ip)
-	for _, cidr := range c.Cidrs {
-		if cidr.Contains(x) {
+	if ip == "" {
+		return c.availablePrefix()
+	}
+	for _, prefix := range c.Prefixes {
+		_, cidr, err := net.ParseCIDR(prefix.Cidr)
+		if err != nil {
+			c.Log.Errorf("failed to parse CIDR: %s", err)
+			os.Exit(1)
+		}
+
+		if cidr.Contains(net.ParseIP(ip)) {
 			return cidr.String()
 		}
 	}
+	return ""
+}
+
+func (c IPAddressLeaseController) availablePrefix() string {
+	for _, prefix := range c.Prefixes {
+		if prefix.Usage().AvailableIPs != 0 {
+			return prefix.Cidr
+		}
+	}
+	c.Log.Errorf("no available ips found")
 	return ""
 }

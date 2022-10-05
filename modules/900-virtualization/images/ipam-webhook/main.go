@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"time"
 
@@ -69,19 +68,14 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	var parsedCIDRs []*net.IPNet
+	var prefixes []*goipam.Prefix
 	for _, cidr := range cfg.cidrs {
-		_, parsedCIDR, err := net.ParseCIDR(cidr)
-		if err != nil {
-			logger.Errorf("failed to add CIDR: %s", err)
-			os.Exit(1)
-		}
-		parsedCIDRs = append(parsedCIDRs, parsedCIDR)
-		_, err = ipam.NewPrefix(ctx, cidr)
+		prefix, err := ipam.NewPrefix(ctx, cidr)
 		if err != nil {
 			logger.Errorf("error creating new prefix for IPAM: %s", err)
 			os.Exit(1)
 		}
+		prefixes = append(prefixes, prefix)
 	}
 
 	// // kubernetes config loaded from ./config or whatever the flag was set to
@@ -145,7 +139,7 @@ func main() {
 		RESTClient: restClient,
 		Ipam:       ipam,
 		Log:        logger,
-		Cidrs:      parsedCIDRs,
+		Prefixes:   prefixes,
 	}
 
 	if err := mgr.Add(controller); err != nil {
