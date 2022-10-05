@@ -55,7 +55,7 @@ spec:
         - name: vmi-router
           args:
           - --db=/var/lib/kubevirt/vmi-router/routes.db
-          {{- range .Values.kubevirt.vmCIDRs }}
+          {{- range .Values.virtualization.vmCIDRs }}
           - --cidr={{ . }}
           {{- end }}
           {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
