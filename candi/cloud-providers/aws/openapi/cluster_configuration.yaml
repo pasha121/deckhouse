@@ -3,6 +3,7 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     type: object
+    default: {}
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, masterNodeGroup, sshPublicKey]
     properties:
@@ -22,6 +23,7 @@ apiVersions:
           type: string
       masterNodeGroup:
         type: object
+        default: {}
         required: [replicas, instanceClass]
         description: |
           Parameters of the master's NodeGroup.
@@ -33,6 +35,7 @@ apiVersions:
               The number of master nodes to create.
           instanceClass:
             type: object
+            default: {}
             required: [instanceType, ami]
             description: |
               Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-aws/cr.html#awsinstanceclass).
@@ -73,7 +76,7 @@ apiVersions:
                 type: integer
               etcdDisk:
                 type: object
-                default: {"sizeGb": 150, type: "gp2"}
+                default: {}
                 properties:
                   sizeGb:
                     description: Etcd disk size in gigabytes.
