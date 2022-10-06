@@ -25,6 +25,6 @@ module "master-node" {
   cloud_config = var.cloudConfig
   zones = local.zones
   tags = local.tags
-  etcd_volume_size = var.providerClusterConfiguration.masterNodeGroup.etcdDisk.sizeGb
-  etcd_volume_type = var.providerClusterConfiguration.masterNodeGroup.etcdDisk.type
+  etcd_volume_size = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDisk.sizeGb
+  etcd_volume_type = var.providerClusterConfiguration.masterNodeGroup.instanceClass.etcdDisk.type
 }
