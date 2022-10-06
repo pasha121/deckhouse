@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/tidwall/gjson"
@@ -18,7 +19,7 @@ import (
 	"github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/internal"
 )
 
-const istioInjectorCpuLimitPath = "global.proxy.resources.limits.cpu"
+const istioInjectorCPULimitPath = "global.proxy.resources.limits.cpu"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue("patch-injector-configmap"),
@@ -67,7 +68,7 @@ func applyInjectorConfigmapFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	if !ok {
 		return nil, nil
 	}
-	if gjson.Get(values, istioInjectorCpuLimitPath).String() == "" {
+	if gjson.Get(values, istioInjectorCPULimitPath).String() == "" {
 		return nil, nil
 	}
 
@@ -83,7 +84,7 @@ func patchInjectorConfigmap(input *go_hook.HookInput) error {
 			continue
 		}
 		im := imRaw.(injectorConfigMap)
-		patchedValues, err := sjson.Delete(im.Values, istioInjectorCpuLimitPath)
+		patchedValues, err := sjson.Delete(im.Values, istioInjectorCPULimitPath)
 		if err != nil {
 			return err
 		}
