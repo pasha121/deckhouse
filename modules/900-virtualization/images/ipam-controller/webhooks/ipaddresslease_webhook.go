@@ -2,10 +2,12 @@ package webhooks
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	d8v1alpha1 "vmi-ipam-controller/api/v1alpha1"
 
@@ -13,31 +15,35 @@ import (
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhlog "github.com/slok/kubewebhook/v2/pkg/log"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
-	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
+	kwhmutating "github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
-	CertFile string
-	KeyFile  string
-	Logger   kwhlog.Logger
-	IPAM     goipam.Ipamer
-	Prefixes []goipam.Prefix
+	CertFile      string
+	KeyFile       string
+	Logger        kwhlog.Logger
+	IPAM          goipam.Ipamer
+	Prefixes      []goipam.Prefix
+	PendingLeases sync.Map
 )
+
+type Lease struct {
+	IP   *goipam.IP
+	Time time.Time
+}
 
 func Start() {
 	// Create our validator
-	vl := &ipAddressLeaseValidator{
-		logger: Logger,
-	}
+	mt := kwhmutating.MutatorFunc(ipAddressLeaseMutator)
 
-	mcfg := kwhvalidating.WebhookConfig{
-		ID:        "ipAddressLeaseValidator",
-		Obj:       &d8v1alpha1.IPAddressLease{},
-		Validator: vl,
-		Logger:    Logger,
+	mcfg := kwhmutating.WebhookConfig{
+		ID:      "ipAddressLeaseMutator",
+		Obj:     &d8v1alpha1.IPAddressLease{},
+		Mutator: mt,
+		Logger:  Logger,
 	}
-	wh, err := kwhvalidating.NewWebhook(mcfg)
+	wh, err := kwhmutating.NewWebhook(mcfg)
 	if err != nil {
 		Logger.Errorf("error creating webhook: %s", err)
 		os.Exit(1)
@@ -62,56 +68,38 @@ type ipAddressLeaseValidator struct {
 	logger kwhlog.Logger
 }
 
-func (v *ipAddressLeaseValidator) Validate(_ context.Context, ar *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-	ipAddressLease, ok := obj.(*d8v1alpha1.IPAddressLease)
+func ipAddressLeaseMutator(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhmutating.MutatorResult, error) {
+	lease, ok := obj.(*d8v1alpha1.IPAddressLease)
 	if !ok {
-		// If not a pod just continue the mutation chain(if there is one) and don't do nothing.
-		return &kwhvalidating.ValidatorResult{}, nil
+		// If not a IPAddressLease just continue the mutation chain(if there is one) and don't do nothing.
+		return &kwhmutating.MutatorResult{}, nil
 	}
 
-	// Requested specific IP address
-	if ipAddressLease.Spec.Address != "" {
-		if prefixForIP(ipAddressLease.Spec.Address) == "" {
-			return &kwhvalidating.ValidatorResult{
-				Valid:   false,
-				Message: "requested IP address is not in range",
-			}, nil
-		}
-		if isIPAddressAllocated(ipAddressLease.Spec.Address) {
-			return &kwhvalidating.ValidatorResult{
-				Valid:   false,
-				Message: "requested IP address is already allocated",
-			}, nil
-		}
-
-		return &kwhvalidating.ValidatorResult{
-			Valid:   true,
-			Message: "ip address is valid",
-		}, nil
+	if lease.Spec.Address != "" && net.ParseIP(lease.Spec.Address) == nil {
+		return &kwhmutating.MutatorResult{}, fmt.Errorf("specified ip address is not valid")
 	}
 
-	// Requested any IP address
-	oldIPAddressLease := d8v1alpha1.IPAddressLease{}
-	if err := json.Unmarshal(ar.OldObjectRaw, &oldIPAddressLease); err != nil {
-		if oldIPAddressLease.Spec.Address != "" && oldIPAddressLease.Spec.Address != ipAddressLease.Spec.Address {
-			return &kwhvalidating.ValidatorResult{
-				Valid:   false,
-				Message: "Field spec.address is immutable after first assignment: %v\n",
-			}, nil
-		}
+	prefix := prefixForIP(lease.Spec.Address)
+	if prefix != "" {
+		return &kwhmutating.MutatorResult{}, fmt.Errorf("unable to find suitable CIDR for allocation, available ranges: %+v", Prefixes)
 	}
 
-	return &kwhvalidating.ValidatorResult{Valid: true}, nil
-}
-
-func isIPAddressAllocated(address string) bool {
-	prefix := prefixForIP(address)
-	ip, err := IPAM.AcquireSpecificIP(context.TODO(), prefix, address)
+	ip, err := IPAM.AcquireSpecificIP(context.TODO(), prefix, lease.Spec.Address)
 	if err != nil {
-		return true
+		return &kwhmutating.MutatorResult{}, fmt.Errorf("unable to allocate ip address: %s", err)
 	}
-	IPAM.ReleaseIPFromPrefix(context.TODO(), prefix, ip.IP.String())
-	return false
+
+	PendingLeases.Store(ip.IP.String(), Lease{IP: ip, Time: time.Now()})
+
+	if lease.Spec.Address == "" {
+		// Assign IP-address
+		lease.Spec.Address = ip.IP.String()
+	}
+
+	return &kwhmutating.MutatorResult{
+		MutatedObject: lease,
+	}, nil
+
 }
 
 func prefixForIP(ip string) string {
@@ -121,8 +109,7 @@ func prefixForIP(ip string) string {
 	for _, prefix := range Prefixes {
 		_, cidr, err := net.ParseCIDR(prefix.Cidr)
 		if err != nil {
-			Logger.Errorf("failed to parse CIDR: %s", err)
-			os.Exit(1)
+			return ""
 		}
 
 		if cidr.Contains(net.ParseIP(ip)) {

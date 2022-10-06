@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	d8v1alpha1 "vmi-ipam-controller/api/v1alpha1"
@@ -30,23 +31,18 @@ import (
 	kwhlog "github.com/slok/kubewebhook/v2/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 )
 
-var (
-	DelayedObjects []interface{}
-	CacheIsLoaded  bool
-)
-
 type IPAddressLeaseController struct {
-	RESTClient rest.Interface
-	NodeName   string
-	Ipam       goipam.Ipamer
-	Log        kwhlog.Logger
-	Prefixes   []*goipam.Prefix
+	RESTClient    rest.Interface
+	NodeName      string
+	Ipam          goipam.Ipamer
+	Log           kwhlog.Logger
+	Prefixes      []*goipam.Prefix
+	PendingLeases sync.Map
 }
 
 func (c IPAddressLeaseController) Start(ctx context.Context) error {
@@ -79,12 +75,6 @@ func (c IPAddressLeaseController) Start(ctx context.Context) error {
 	}
 	c.Log.Infof("syncronization completed")
 
-	c.Log.Infof("processing new leases (%d)", len(DelayedObjects))
-	CacheIsLoaded = true
-	for _, obj := range DelayedObjects {
-		c.addFunc(obj)
-	}
-
 	c.Log.Infof("starting validation webhook")
 	go webhooks.Start()
 
@@ -96,40 +86,42 @@ func (c IPAddressLeaseController) Start(ctx context.Context) error {
 
 func (c IPAddressLeaseController) addFunc(obj interface{}) {
 	lease, ok := obj.(*d8v1alpha1.IPAddressLease)
+	var allocatedViaWebhook bool
 	var err error
 	if !ok {
 		// object is not IPAddressLease
 		return
 	}
-	if lease.Spec.Address == "" && !CacheIsLoaded {
-		c.Log.Infof("skip ip request because cache is not yet synced %s/%s", lease.Namespace, lease.Name)
-		DelayedObjects = append(DelayedObjects, obj)
+	if lease.Spec.Address == "" {
+		c.Log.Errorf("missing address for %s/%s", lease.Namespace, lease.Name, lease.Spec.Address)
 		return
 	}
 
-	var prefix string
-	if lease.Spec.Address != "" {
-		prefix = c.prefixForIP(lease.Spec.Address)
-	} else {
-		prefix = c.availablePrefix()
+	c.PendingLeases.Range(func(k, v interface{}) bool {
+		fmt.Println("key:", k, ", val:", v)
+		if k.(string) == lease.Spec.Address {
+			c.PendingLeases.Delete(lease.Spec.Address)
+			allocatedViaWebhook = true
+			return false
+		}
+		return true
+	})
+
+	if allocatedViaWebhook {
+		c.Log.Infof("allocated %s/%s: %s", lease.Namespace, lease.Name, lease.Spec.Address)
+		return
 	}
+
+	prefix := c.prefixForIP(lease.Spec.Address)
 	if prefix == "" {
 		c.Log.Errorf("unable to find prefix for IP %s", lease.Spec.Address)
 		return
 	}
-
-	ip, err := c.Ipam.AcquireSpecificIP(context.TODO(), prefix, lease.Spec.Address)
+	_, err = c.Ipam.AcquireSpecificIP(context.TODO(), prefix, lease.Spec.Address)
 	if err != nil {
 		c.Log.Errorf("error allocating ip %s: %+s", lease.Spec.Address, err)
 	}
-	c.Log.Infof("allocated %s/%s: %s", lease.Namespace, lease.Name, ip.IP.String())
-
-	patch := []byte(fmt.Sprintf(`[{"op": "add", "path": "/spec", "value": {"address": "%s"}}]`, ip.IP.String()))
-	err = c.RESTClient.Patch(types.JSONPatchType).Resource("ipaddressleases").Namespace(lease.Namespace).Name(lease.Name).Body(patch).Do(context.TODO()).Error()
-	if err != nil {
-		c.Log.Errorf("error patching IPAddressLease %s/%s: %s", lease.Namespace, lease.Name, err)
-		c.Ipam.ReleaseIPFromPrefix(context.TODO(), prefix, ip.IP.String())
-	}
+	c.Log.Infof("loaded %s/%s: %s", lease.Namespace, lease.Name, lease.Spec.Address)
 }
 func (c IPAddressLeaseController) deleteFunc(obj interface{}) {
 	lease, ok := obj.(*d8v1alpha1.IPAddressLease)

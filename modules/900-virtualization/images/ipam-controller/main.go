@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	goipam "github.com/metal-stack/go-ipam"
@@ -47,7 +48,6 @@ func init() {
 }
 
 func main() {
-	// allocatedIPAddresses := make(map[string]struct{})
 	logrusLogEntry := logrus.NewEntry(logrus.New())
 	logrusLogEntry.Logger.SetLevel(logrus.DebugLevel)
 	logger := kwhlogrus.NewLogrus(logrusLogEntry)
@@ -65,12 +65,14 @@ func main() {
 
 	// create a ipamer with in memory storage
 	ipam := goipam.New()
+	var pendingLeases sync.Map
 
 	// pass webhook parameters
 	webhooks.Logger = logger
 	webhooks.CertFile = cfg.certFile
 	webhooks.KeyFile = cfg.keyFile
 	webhooks.IPAM = ipam
+	webhooks.PendingLeases = pendingLeases
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -84,45 +86,6 @@ func main() {
 		}
 		prefixes = append(prefixes, prefix)
 	}
-
-	// // kubernetes config loaded from ./config or whatever the flag was set to
-	// config, err := clientcmd.BuildConfigFromFlags("", cfg.kubeconfig)
-	// if err != nil {
-	// 	logger.Errorf("cannot load Kubernetes config: %v\n", err)
-	// 	os.Exit(1)
-	// }
-
-	// // instantiate our client with config
-	// clientset, err := kubernetes.NewForConfig(config)
-	// if err != nil {
-	// 	logger.Errorf("cannot create Kunernetes client: %v\n", err)
-	// 	os.Exit(1)
-	// }
-
-	// // Fetch list of IPAddressLeases
-	// ipList := d8v1alpha1.IPAddressLeaseList{}
-	// ipListRaw, err := clientset.RESTClient().Get().AbsPath("/apis/deckhouse.io/v1alpha1/ipaddressleases").DoRaw(context.TODO())
-	// if err != nil {
-	// 	logger.Errorf("cannot obtain IPAddressLeases list: %v\n", err)
-	// 	os.Exit(1)
-	// }
-
-	// if err := json.Unmarshal(ipListRaw, &ipList); err != nil {
-	// 	logger.Errorf("cannot unmarshal IPAddressLeases list: %v\n", err)
-	// 	os.Exit(1)
-	// }
-
-	// w := tabwriter.NewWriter(os.Stdout, 0, 0, 5, ' ', 0)
-	// fmt.Fprintln(w, "Type\tName\tNamespace\tStatus\tip\tmac")
-
-	// for _, lease := range ipList.Items {
-	// 	ip := lease.Spec.Address
-	// 	allocatedIPAddresses[ip] = struct{}{}
-	// 	fmt.Fprintf(w, "%s\t%s\t%s\t%v\n", lease.Kind, lease.Name, lease.Namespace, ip)
-	// }
-	// w.Flush()
-
-	//////////////////////////////
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -142,11 +105,12 @@ func main() {
 	}
 
 	controller := controllers.IPAddressLeaseController{
-		NodeName:   os.Getenv("NODE_NAME"),
-		RESTClient: restClient,
-		Ipam:       ipam,
-		Log:        logger,
-		Prefixes:   prefixes,
+		NodeName:      os.Getenv("NODE_NAME"),
+		RESTClient:    restClient,
+		Ipam:          ipam,
+		Log:           logger,
+		Prefixes:      prefixes,
+		PendingLeases: pendingLeases,
 	}
 
 	if err := mgr.Add(controller); err != nil {
@@ -168,7 +132,5 @@ func main() {
 		logger.Errorf("problem running manager: %s", err)
 		os.Exit(1)
 	}
-
-	////////////////////////////
 
 }
