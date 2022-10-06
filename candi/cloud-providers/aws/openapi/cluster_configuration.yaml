@@ -73,11 +73,14 @@ apiVersions:
                 type: integer
               etcdDisk:
                 type: object
+                default: {"sizeGb": 150, type: "gp2"}
                 properties:
                   sizeGb:
+                    description: Etcd disk size in gigabytes.
                     type: integer
                     default: 150
                   type:
+                    description: Etcd disk type.
                     type: string
                     default: gp2
           zones:
