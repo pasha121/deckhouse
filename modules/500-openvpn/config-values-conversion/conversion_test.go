@@ -30,22 +30,22 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-var _ = Describe("Module :: openvpn :: config values conversions :: v0.0.0", func() {
+var _ = Describe("Module :: openvpn :: config values conversions :: version 1", func() {
 	f := SetupConverter(``)
 
 	const migratedValues = `
 inlet: ExternalIP
 hostPort: 2222
 `
-	Context("config values already migrated", func() {
+	Context("giving already migrated config values", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml(".", migratedValues)
-			f.Convert("v0.0.0")
+			f.Convert(1)
 		})
 
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
-			Expect(f.FinalVersion).Should(Equal("v1.0.0"))
+			Expect(f.FinalVersion).Should(Equal(2))
 			Expect(f.FinalValues.Get("storageClass").String()).Should(BeEmpty())
 		})
 	})
@@ -54,17 +54,20 @@ hostPort: 2222
 inlet: ExternalIP
 hostPort: 2222
 storageClass: default
+auth:
+  password: p4ssw0rd
 `
-	Context("config values are non migrated", func() {
+	Context("giving non-migrated values", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml(".", nonMigratedValues)
-			f.Convert("v0.0.0")
+			f.Convert(1)
 		})
 
-		It("should convert", func() {
+		It("should convert to latest version", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
-			Expect(f.FinalVersion).Should(Equal("v1.0.0"))
-			Expect(f.FinalValues.Get("storageClass").String()).Should(BeEmpty())
+			Expect(f.FinalVersion).Should(Equal(2))
+			Expect(f.FinalValues.Get("storageClass").String()).Should(BeEmpty(), "should delete storageClass field")
+			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
 		})
 	})
 })
@@ -73,20 +76,25 @@ storageClass: default
 var _ = Describe("Module :: openvpn :: config values conversions :: to latest", func() {
 	f := SetupConverter(``)
 
-	Context("v0.0.0", func() {
+	Context("version 1", func() {
 		const v0Values = `
 inlet: ExternalIP
 hostPort: 2222
 storageClass: default
+auth:
+  password: p4ssw0rd
 `
 
 		BeforeEach(func() {
 			f.ValuesSetFromYaml(".", v0Values)
-			f.ConvertToLatest("v0.0.0")
+			f.ConvertToLatest(1)
 		})
 
 		It("should convert", func() {
 			Expect(f.Error).ShouldNot(HaveOccurred())
+			Expect(f.FinalVersion).Should(Equal(2))
+			Expect(f.FinalValues.Get("storageClass").String()).Should(BeEmpty(), "should delete storageClass field")
+			Expect(f.FinalValues.Get("auth.password").Exists()).Should(BeFalse(), "should delete auth.password field")
 		})
 	})
 })

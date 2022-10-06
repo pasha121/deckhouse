@@ -32,7 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
 )
 
 // Variables with component versions. They set by 'go build' command.
@@ -97,9 +97,10 @@ func main() {
 			}
 			operator.Start()
 
-			dependency.Internals().SetAddonOperator(operator)
+			// Init deckhouse-config service with ModuleManager instance.
+			d8config.InitService(operator.ModuleManager)
 
-			// Block action by waiting signals from OS.
+			// Block main thread by waiting signals from OS.
 			utils_signal.WaitForProcessInterruption(func() {
 				operator.Shutdown()
 				os.Exit(1)

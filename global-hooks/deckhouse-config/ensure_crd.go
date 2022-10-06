@@ -24,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 )
 
-const deckhouseConfigCRDPath = "/deckhouse/modules/019-deckhouse-config/crds/deckhouse-config.yaml"
+const deckhouseConfigCRDPath = "/deckhouse/modules/003-deckhouse-config/crds/deckhouse-config.yaml"
 
 // Use order:1 to run before all global hooks.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

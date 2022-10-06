@@ -17,28 +17,26 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/go_lib/operator"
+	"os"
+
+	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
+	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	d8config "github.com/deckhouse/deckhouse/go_lib/deckhouse-config"
-	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 /**
 This hook switches deckhouse-controller to use a number of typed DeckhouseConfig custom
-resources and a managed ConfigMap/deckhouse-generated-config-do-not-edit
-instead one untyped ConfigMap/deckhouse.
+resources and a managed ConfigMap/deckhouse-generated-config-do-not-edit object
+instead of one untyped and unmanaged ConfigMap/deckhouse object.
 */
 
 // Use order:1 to run before all global hooks.
@@ -46,9 +44,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 1},
 }, dependency.WithExternalDependencies(migrateOrSyncModuleConfigs))
 
+const (
+	shouldCreateDeckhouseConfigs = "deckhouse.io/should-create-deckhouse-configs"
+)
+
 // migrateOrSyncModuleConfigs runs on deckhouse-controller startup
 // as early as possible and do two things:
-// - switches deckhouse-controller from configuration via ConfigMap/deckhouse
+// - migrates deckhouse-controller from configuration via ConfigMap/deckhouse
 //   that is managed by deckhouse and by user to configuration via
 //   DeckhouseConfig objects that managed by user so can be stored in Git.
 // - synchronize DeckhouseConfig objects content to intermediate
@@ -59,13 +61,24 @@ func migrateOrSyncModuleConfigs(input *go_hook.HookInput, dc dependency.Containe
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
 
-	// Detect if Deployment/deckhouse is used ConfigMap/deckhouse-generated-config-do-not-edit.
-	isGeneratedMapInUse, err := isGeneratedMapInUse(kubeClient)
-	if err != nil {
-		return fmt.Errorf("get deploy/deckhouse: %v", err)
+	// Phase 1: "Deployment should use generated ConfigMap"
+	// Migrate to generated ConfigMap:
+	// - Create a copy of ConfigMap/deckhouse in ConfigMap/deckhouse-generated-config-do-not-edit.
+	// - Add annotation deckhouse.io/should-create-deckhouse-configs to create DeckhouseConfig resources after restart.
+	// - Update deploy/deckhouse to use new ConfigMap.
+	// NOTE: deployment is migrated first to restart early and prevent losing log messages
+	//       about creating DeckhouseConfig resources.
+	addonOperatorCM := os.Getenv("ADDON_OPERATOR_CONFIG_MAP")
+	if addonOperatorCM != d8config.GeneratedConfigMapName {
+		input.LogEntry.Infof("Deployment/deckhouse uses cm/deckhouse. Copy data to cm/%s and update deployment/deckhouse to use it.", d8config.GeneratedConfigMapName)
+		return migrateToGeneratedConfigMap(input, kubeClient)
+		// Deckhouse will restart after applying patches.
 	}
 
-	// Get ConfigMap/deckhouse-generated-config-do-not-edit.
+	// Phase 2: "Migrate ConfigMap to DeckhouseConfigs".
+	// If ConfigMap/deckhouse-generated-config-do-not-edit has annotation:
+	// - Create DeckhouseConfig resources for each module section and for global section.
+	// - Add patch to remove annotation from ConfigMap.
 	hasGeneratedCM := true
 	generatedCM, err := d8config.GetGeneratedConfigMap(kubeClient)
 	if err != nil {
@@ -75,38 +88,61 @@ func migrateOrSyncModuleConfigs(input *go_hook.HookInput, dc dependency.Containe
 		// NotFound error is occurred.
 		hasGeneratedCM = false
 	}
+	if hasGeneratedCM {
+		_, shouldMigrate := generatedCM.GetAnnotations()[shouldCreateDeckhouseConfigs]
+		if shouldMigrate {
+			input.LogEntry.Infof("Migrate Configmap to DeckhouseConfig resources.")
+			return createInitialDeckhouseConfigs(input, generatedCM.Data)
+		}
+	}
 
-	// List DeckhouseConfig objects.
+	// Phase 3: "Normal mode".
+	// Sync existing DeckhouseConfig resources to ConfigMap/deckhouse-generated-config-do-not-edit.
+	input.LogEntry.Infof("Sync DeckhouseConfig resources to generated ConfigMap.")
 	allConfigs, err := d8config.GetAllConfigs(kubeClient)
 	if err != nil {
 		return fmt.Errorf("get all settings: %v", err)
 	}
-
-	if !isGeneratedMapInUse {
-		// Migrate ConfigMap/deckhouse to ModuleConfigs
-		// - create DeckhouseConfig resources for each module
-		// - create new generated ConfigMap
-		// - update deploy/deckhouse to use new ConfigMap.
-		input.LogEntry.Infof("Deployment/deckhouse is not migrated. Migrate to separate module configs.")
-		return migrateToModuleConfigs(input, kubeClient)
-	}
-
-	// Create absent DeckhouseConfig objects from generated ConfigMap and
-	// then sync generated ConfigMap from DeckhouseConfig objects.
-	// Note: DeckhouseConfig objects are controlled from Git, so auto-deletion is not an option.
-	// The compromise here is to use generated ConfigMap to re-create DeckhouseConfig objects for known modules only.
 	input.LogEntry.Infof("Generated cm: %v, module configs: %d. Run sync.", hasGeneratedCM, len(allConfigs))
-	return syncModuleConfigs(input, generatedCM, allConfigs)
+	return syncDeckhouseConfigs(input, generatedCM, allConfigs)
 }
 
-func migrateToModuleConfigs(input *go_hook.HookInput, kubeClient k8s.Client) error {
-	addonOperator := operator.Internals().AddonOperator()
-	possibleNames := addonOperator.GetModuleNames()
-	possibleNames = append(possibleNames, "global")
-	// Migrate cm/deckhouse to DeckhouseConfig resources and a generated ConfigMap.
-	objs, err := d8config.MigrateConfigMapToModuleConfigs(kubeClient, possibleNames)
+// migrateToGeneratedConfigMap creates cm/deckhouse copy with an additional annotation
+// and update deploy/deckhouse to use this new cm.
+// Note: it creates an empty cm if cm/deckhouse is not found.
+func migrateToGeneratedConfigMap(input *go_hook.HookInput, kubeClient k8s.Client) error {
+	cm, err := d8config.GetDeckhouseConfigMap(kubeClient)
+	if err != nil && !k8errors.IsNotFound(err) {
+		return fmt.Errorf("get ConfigMap/%s: %v", d8config.DeckhouseConfigMapName, err)
+	}
+
+	data := map[string]string{}
+	if cm != nil {
+		data = cm.Data
+	}
+
+	newCm := d8config.GeneratedConfigMap(data)
+	newCm.SetAnnotations(map[string]string{shouldCreateDeckhouseConfigs: "true"})
+
+	input.PatchCollector.Create(newCm, object_patch.UpdateIfExists())
+
+	modifyDeckhouseDeploymentToUseGeneratedConfigMap(input.PatchCollector, d8config.GeneratedConfigMapName)
+
+	return nil
+}
+
+func createInitialDeckhouseConfigs(input *go_hook.HookInput, cmData map[string]string) error {
+	// Create DeckhouseConfigs from ConfigMap data.
+	objs, err := d8config.Service().Transformer().ConfigMapToDeckhouseConfigList(cmData)
 	if err != nil {
 		return err
+	}
+
+	for _, cfg := range objs {
+		err := d8config.Service().ConfigValidator().ValidateConfig(cfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	input.LogEntry.Infof("Create %d DeckhouseConfig objects", len(objs))
@@ -114,17 +150,15 @@ func migrateToModuleConfigs(input *go_hook.HookInput, kubeClient k8s.Client) err
 		input.PatchCollector.Create(obj, object_patch.UpdateIfExists())
 	}
 
-	cmData, err := d8config.SyncFromDeckhouseConfigs(objs)
+	// Recreate ConfigMap from DeckhouseConfigs to clean-up deprecated module sections.
+	newData, err := d8config.Service().Transformer().DeckhouseConfigListToConfigMap(objs)
 	if err != nil {
 		return err
 	}
-	cm := d8config.GeneratedConfigMap(cmData)
-	input.LogEntry.Infof("Create Config/%s", cm.Name)
+	cm := d8config.GeneratedConfigMap(newData)
+	input.LogEntry.Infof("Re-create initial Config/%s", cm.Name)
 	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
 
-	input.LogEntry.Infof("Update deploy/deckhouse to use Config/%s", cm.Name)
-	modifyDeckhouseDeploymentToUseGeneratedConfigMap(input.PatchCollector, cm.Name)
-	// Deckhouse restarts here.
 	return nil
 }
 
@@ -147,7 +181,7 @@ func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_pat
 				}
 			}
 
-			if cmEnvIdx > 0 {
+			if cmEnvIdx >= 0 {
 				depl.Spec.Template.Spec.Containers[i].Env[cmEnvIdx].Value = cmName
 				break
 			}
@@ -157,15 +191,22 @@ func modifyDeckhouseDeploymentToUseGeneratedConfigMap(patchCollector *object_pat
 	}
 
 	patchCollector.Filter(modify, "apps/v1", "Deployment", d8config.DeckhouseNS, "deckhouse")
-	return
 }
 
-func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8config_v1.DeckhouseConfig) error {
-	cmData, err := d8config.SyncFromDeckhouseConfigs(allConfigs)
+func syncDeckhouseConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allConfigs []*d8config_v1.DeckhouseConfig) error {
+	for _, cfg := range allConfigs {
+		err := d8config.Service().ConfigValidator().ValidateConfig(cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	cmData, err := d8config.Service().Transformer().DeckhouseConfigListToConfigMap(allConfigs)
 	if err != nil {
 		return err
 	}
 	cm := d8config.GeneratedConfigMap(cmData)
+	input.LogEntry.Infof("Re-create Config/%s on sync", cm.Name)
 	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
 
 	if generatedCM == nil || len(generatedCM.Data) == 0 {
@@ -175,28 +216,9 @@ func syncModuleConfigs(input *go_hook.HookInput, generatedCM *v1.ConfigMap, allC
 	// Log deleted sections.
 	for name := range generatedCM.Data {
 		if _, has := cmData[name]; !has {
-			input.LogEntry.Warnf("Seems DeckhouseConfig/%s was deleted. Delete section '%s' from cm/%s.", name, name, cm.Name)
+			input.LogEntry.Warnf("Seems DeckhouseConfig/%s was deleted. Delete section '%s' from cm/%s...", name, name, cm.Name)
 		}
 	}
 
 	return nil
-}
-
-// isGeneratedMapInUse detects if Deployment/deckhouse is already
-// migrated to use generated ConfigMap.
-func isGeneratedMapInUse(klient k8s.Client) (bool, error) {
-	depl, err := klient.AppsV1().Deployments(d8config.DeckhouseNS).Get(context.TODO(), "deckhouse", metav1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
-	if depl == nil {
-		return false, fmt.Errorf("no object")
-	}
-	envs := depl.Spec.Template.Spec.Containers[0].Env
-	for _, envVar := range envs {
-		if envVar.Name == "ADDON_OPERATOR_CONFIG_MAP" {
-			return envVar.Value == d8config.GeneratedConfigMapName, nil
-		}
-	}
-	return false, fmt.Errorf("env ADDON_OPERATOR_CONFIG_MAP not found in deployment spec")
 }

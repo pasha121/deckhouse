@@ -26,9 +26,8 @@ func TestConvertConfigValuesToLatest(t *testing.T) {
 	g := NewWithT(t)
 
 	const modName = "test-mod"
-	RegisterFunc(modName, 1, 2, func(configValues map[string]interface{}) (map[string]interface{}, error) {
-		configValues["param2"] = "val2"
-		return configValues, nil
+	RegisterFunc(modName, 1, 2, func(configValues *JSONValues) error {
+		return configValues.Set("param2", "val2")
 	})
 
 	v0Vals := map[string]interface{}{

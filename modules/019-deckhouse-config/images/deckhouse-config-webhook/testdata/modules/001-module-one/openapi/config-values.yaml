@@ -1,4 +1,0 @@
-type: object
-properties:
-  param1:
-    type: string

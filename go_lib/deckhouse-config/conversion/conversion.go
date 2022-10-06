@@ -16,7 +16,7 @@ limitations under the License.
 
 package conversion
 
-type ConversionFunc func(configValues map[string]interface{}) (map[string]interface{}, error)
+type ConversionFunc func(configValues *JSONValues) error
 
 type Conversion struct {
 	Source     int
@@ -24,11 +24,17 @@ type Conversion struct {
 	Conversion ConversionFunc
 }
 
-func (c *Conversion) Convert(configValues map[string]interface{}) (map[string]interface{}, error) {
+func (c *Conversion) Convert(configValues *JSONValues) (*JSONValues, error) {
 	if c.Conversion == nil {
 		return nil, nil
 	}
-	return c.Conversion(configValues)
+	// Copy values to prevent accidental mutating on error.
+	newValues := NewFromBytes(configValues.Bytes())
+	err := c.Conversion(newValues)
+	if err != nil {
+		return configValues, err
+	}
+	return newValues, nil
 }
 
 func NewConversion(srcVersion int, targetVersion int, conversionFunc ConversionFunc) *Conversion {

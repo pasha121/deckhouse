@@ -53,6 +53,11 @@ func (c *ModuleChain) Add(conversion *Conversion) {
 }
 
 func (c *ModuleChain) ConvertToLatest(fromVersion int, values map[string]interface{}) (int, map[string]interface{}, error) {
+	// Return if values are already have latest version.
+	if fromVersion == c.latestVersion {
+		return fromVersion, values, nil
+	}
+
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -60,7 +65,11 @@ func (c *ModuleChain) ConvertToLatest(fromVersion int, values map[string]interfa
 
 	tries := 0
 	currentVersion := fromVersion
-	currentValues := values
+	currentValues, err := NewFromMap(values)
+	if err != nil {
+		return 0, nil, fmt.Errorf("bad input values: %v", err)
+	}
+
 	for {
 		conv := c.conversions[currentVersion]
 		if conv == nil {
@@ -74,7 +83,11 @@ func (c *ModuleChain) ConvertToLatest(fromVersion int, values map[string]interfa
 
 		// Stop after converting to the latest version.
 		if newVer == c.latestVersion {
-			return newVer, newValues, nil
+			newMap, err := newValues.AsMap()
+			if err != nil {
+				return 0, nil, fmt.Errorf("convert from %d: map error for %d: %v", fromVersion, currentVersion, err)
+			}
+			return newVer, newMap, nil
 		}
 
 		currentVersion = newVer
@@ -116,7 +129,19 @@ func (c *ModuleChain) HasVersion(version int) bool {
 	return has
 }
 
-// VersionList returns all versions for the module.
+// IsValidVersion returns whether version has registered conversion or the latest.
+func (c *ModuleChain) IsValidVersion(version int) bool {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	_, has := c.conversions[version]
+	if has {
+		return true
+	}
+	return version == c.latestVersion
+}
+
+// VersionList returns all valid versions.
 func (c *ModuleChain) VersionList() []int {
 	c.m.RLock()
 	defer c.m.RUnlock()
@@ -124,5 +149,6 @@ func (c *ModuleChain) VersionList() []int {
 	for ver := range c.conversions {
 		versions = append(versions, ver)
 	}
+	versions = append(versions, c.latestVersion)
 	return versions
 }

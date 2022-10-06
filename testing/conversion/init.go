@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/iancoleman/strcase"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -37,7 +36,7 @@ type Converter struct {
 	values     *values_store.ValuesStore
 
 	FinalValues  *values_store.ValuesStore
-	FinalVersion string
+	FinalVersion int
 
 	Error error
 }
@@ -54,27 +53,21 @@ func (c *Converter) ValuesSetFromYaml(path, value string) {
 	c.values.SetByPathFromYAML(path, []byte(value))
 }
 
-func (c *Converter) Convert(version string) {
+func (c *Converter) Convert(fromVersion int) {
 	chain := conversion.Registry().Chain(c.moduleName)
-	Expect(chain).ShouldNot(BeNil(), "Conversion for module %s should be registered", c.moduleName, version)
+	Expect(chain).ShouldNot(BeNil(), "Conversion for module %s should be registered", c.moduleName, fromVersion)
 
-	conv := chain.Conversion(version)
-	Expect(conv).ShouldNot(BeNil(), "Conversion for module %s and version %s should be registered", c.moduleName, version)
+	conv := chain.Conversion(fromVersion)
+	Expect(conv).ShouldNot(BeNil(), "Conversion for module %s and version %s should be registered", c.moduleName, fromVersion)
 
-	convValues, convError := conv.Convert(c.values.Values)
+	convValues, convError := conv.Convert(conversion.NewFromBytes(c.values.JSONRepr))
 
-	convValuesJSON, err := json.Marshal(convValues)
-	if err != nil {
-		c.Error = err
-		return
-	}
-
-	c.FinalValues = values_store.NewStoreFromRawJSON(convValuesJSON)
-	c.FinalVersion = conv.Target()
+	c.FinalValues = values_store.NewStoreFromRawJSON(convValues.Bytes())
+	c.FinalVersion = conv.Target
 	c.Error = convError
 }
 
-func (c *Converter) ConvertToLatest(fromVersion string) {
+func (c *Converter) ConvertToLatest(fromVersion int) {
 	modChain := conversion.Registry().Chain(c.moduleName)
 
 	Expect(modChain).ShouldNot(BeNil(), "Module %s should have registered conversions", c.moduleName)
@@ -109,9 +102,6 @@ func SetupConverter(values string) *Converter {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	moduleName = strcase.ToLowerCamel(moduleName)
-	// moduleValuesKey := addonutils.ModuleNameToValuesKey(moduleName)
 
 	initialValues, err := library.InitValues(modulePath, []byte(values))
 	if err != nil {

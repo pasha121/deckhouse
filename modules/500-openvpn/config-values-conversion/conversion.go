@@ -22,10 +22,13 @@ import (
 
 const moduleName = "openvpn"
 
-var _ = conversion.RegisterFunc(moduleName, "v0.0.0", "v1.0.0", convertV0ToV1)
+var _ = conversion.RegisterFunc(moduleName, 1, 2, convertV1ToV2)
 
-// convertV0ToV1 removes storageClass field.
-func convertV0ToV1(values map[string]interface{}) (map[string]interface{}, error) {
-	delete(values, "storageClass")
-	return values, nil
+// convertV1ToV2 removes deprecated fields.
+func convertV1ToV2(values *conversion.JSONValues) error {
+	err := values.Delete("auth.password")
+	if err != nil {
+		return err
+	}
+	return values.Delete("storageClass")
 }
