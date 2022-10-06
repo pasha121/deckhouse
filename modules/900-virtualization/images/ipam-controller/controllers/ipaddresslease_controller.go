@@ -42,7 +42,7 @@ type IPAddressLeaseController struct {
 	Ipam          goipam.Ipamer
 	Log           kwhlog.Logger
 	Prefixes      []*goipam.Prefix
-	PendingLeases sync.Map
+	PendingLeases *sync.Map
 }
 
 func (c IPAddressLeaseController) Start(ctx context.Context) error {
@@ -86,28 +86,17 @@ func (c IPAddressLeaseController) Start(ctx context.Context) error {
 
 func (c IPAddressLeaseController) addFunc(obj interface{}) {
 	lease, ok := obj.(*d8v1alpha1.IPAddressLease)
-	var allocatedViaWebhook bool
 	var err error
 	if !ok {
 		// object is not IPAddressLease
 		return
 	}
 	if lease.Spec.Address == "" {
-		c.Log.Errorf("missing address for %s/%s", lease.Namespace, lease.Name, lease.Spec.Address)
+		c.Log.Errorf("missing address for %s/%s", lease.Namespace, lease.Name)
 		return
 	}
 
-	c.PendingLeases.Range(func(k, v interface{}) bool {
-		fmt.Println("key:", k, ", val:", v)
-		if k.(string) == lease.Spec.Address {
-			c.PendingLeases.Delete(lease.Spec.Address)
-			allocatedViaWebhook = true
-			return false
-		}
-		return true
-	})
-
-	if allocatedViaWebhook {
+	if _, ok := c.PendingLeases.LoadAndDelete(lease.Spec.Address); ok {
 		c.Log.Infof("allocated %s/%s: %s", lease.Namespace, lease.Name, lease.Spec.Address)
 		return
 	}
@@ -120,6 +109,7 @@ func (c IPAddressLeaseController) addFunc(obj interface{}) {
 	_, err = c.Ipam.AcquireSpecificIP(context.TODO(), prefix, lease.Spec.Address)
 	if err != nil {
 		c.Log.Errorf("error allocating ip %s: %+s", lease.Spec.Address, err)
+		return
 	}
 	c.Log.Infof("loaded %s/%s: %s", lease.Namespace, lease.Name, lease.Spec.Address)
 }
