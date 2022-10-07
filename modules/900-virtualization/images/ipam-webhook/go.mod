@@ -1,4 +1,4 @@
-module vmi-ipam-controller
+module vmi-ipam-webhook
 
 go 1.18
 

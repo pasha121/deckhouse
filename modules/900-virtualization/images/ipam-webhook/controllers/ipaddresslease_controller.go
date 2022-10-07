@@ -24,8 +24,8 @@ import (
 	"sync"
 	"time"
 
-	d8v1alpha1 "vmi-ipam-controller/api/v1alpha1"
-	"vmi-ipam-controller/webhooks"
+	d8v1alpha1 "vmi-ipam-webhook/api/v1alpha1"
+	"vmi-ipam-webhook/webhooks"
 
 	goipam "github.com/metal-stack/go-ipam"
 	kwhlog "github.com/slok/kubewebhook/v2/pkg/log"
@@ -38,7 +38,6 @@ import (
 
 type IPAddressLeaseController struct {
 	RESTClient    rest.Interface
-	NodeName      string
 	Ipam          goipam.Ipamer
 	Log           kwhlog.Logger
 	Prefixes      []*goipam.Prefix

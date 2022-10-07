@@ -20,9 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	d8v1alpha1 "vmi-ipam-controller/api/v1alpha1"
-	"vmi-ipam-controller/controllers"
-	"vmi-ipam-controller/webhooks"
+	d8v1alpha1 "vmi-ipam-webhook/api/v1alpha1"
+	"vmi-ipam-webhook/controllers"
+	"vmi-ipam-webhook/webhooks"
 )
 
 type config struct {
@@ -82,6 +82,7 @@ func main() {
 	}
 
 	// pass webhook parameters
+	// TODO: get rid of this shit
 	webhooks.Logger = logger
 	webhooks.CertFile = cfg.certFile
 	webhooks.KeyFile = cfg.keyFile
@@ -107,12 +108,12 @@ func main() {
 	}
 
 	controller := controllers.IPAddressLeaseController{
-		NodeName:      os.Getenv("NODE_NAME"),
 		RESTClient:    restClient,
 		Ipam:          ipam,
 		Log:           logger,
 		Prefixes:      prefixes,
 		PendingLeases: &pendingLeases,
+		// TODO: enable leader election
 	}
 
 	if err := mgr.Add(controller); err != nil {

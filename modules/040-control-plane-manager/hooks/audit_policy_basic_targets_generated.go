@@ -73,7 +73,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"grafana",
 	"image-availability-exporter",
 	"ingress-nginx",
-	"ipam-controller",
+	"ipam-webhook",
 	"kiali",
 	"kube-state-metrics",
 	"legacy-cert-manager",

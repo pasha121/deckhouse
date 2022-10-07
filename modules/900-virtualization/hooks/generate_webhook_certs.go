@@ -31,9 +31,9 @@ import (
 
 const (
 	namespace   = "d8-virtualization"
-	serviceName = "ipam-controller-webhook"
+	serviceName = "ipam-webhook"
 	serviceHost = serviceName + "." + namespace + ".svc"
-	secretName  = "ipam-controller-webhook-certs"
+	secretName  = "ipam-webhook-certs"
 	certPath    = "virtualization.internal.webhookCert"
 )
 
@@ -92,13 +92,13 @@ func generateSelfSignedCertificates(input *go_hook.HookInput) error {
 
 	if cert.CA == "" || cert.Cert == "" || cert.Key == "" {
 		var err error
-		caCert, err = certificate.GenerateCA(input.LogEntry, "ipam-controller-webhook-ca")
+		caCert, err = certificate.GenerateCA(input.LogEntry, "ipam-webhook-ca")
 		if err != nil {
 			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}
 
 		cert, err = certificate.GenerateSelfSignedCert(input.LogEntry,
-			"ipam-controller-webhook",
+			"ipam-webhook",
 			caCert,
 			certificate.WithSigningDefaultExpiry(87600*time.Hour),
 			certificate.WithSANs(

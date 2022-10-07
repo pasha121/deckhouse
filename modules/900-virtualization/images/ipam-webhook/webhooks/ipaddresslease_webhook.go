@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	d8v1alpha1 "vmi-ipam-controller/api/v1alpha1"
+	d8v1alpha1 "vmi-ipam-webhook/api/v1alpha1"
 
 	goipam "github.com/metal-stack/go-ipam"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"

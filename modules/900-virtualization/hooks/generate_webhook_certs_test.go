@@ -62,7 +62,7 @@ var _ = Describe("Modules :: virtualization :: hooks :: generate_certs ::", func
 
 			// Additional checks for controller certificate
 			opts := x509.VerifyOptions{
-				DNSName: "ipam-controller-webhook.d8-virtualization.svc",
+				DNSName: "ipam-webhook.d8-virtualization.svc",
 				Roots:   certPool,
 			}
 			_, err = cert.Verify(opts)
@@ -86,7 +86,7 @@ var _ = Describe("Modules :: virtualization :: hooks :: generate_certs ::", func
 apiVersion: v1
 kind: Secret
 metadata:
-  name: ipam-controller-webhook-certs
+  name: ipam-webhook-certs
   namespace: d8-virtualization
 data:
   tls.crt: YQo= # a

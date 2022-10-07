@@ -2,7 +2,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: mutating-webhook.ipam.virtualization.deckhouse.io
-  {{- include "helm_lib_module_labels" (list . (dict "app" "ipam-controller")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ipam-webhook")) | nindent 2 }}
 webhooks:
 - name: mutating-webhook.ipam.virtualization.deckhouse.io
   rules:
@@ -14,7 +14,7 @@ webhooks:
   clientConfig:
     service:
       namespace: "d8-virtualization"
-      name: "ipam-controller-webhook"
+      name: "ipam-webhook"
       path: "/mutate"
       port: 8082
     caBundle: {{ .Values.virtualization.internal.webhookCert.ca | b64enc }}

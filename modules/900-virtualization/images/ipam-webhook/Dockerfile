@@ -15,13 +15,13 @@ RUN go mod download
 COPY . .
 
 # Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o ipam-controller main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o ipam-webhook main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM $BASE_DEBIAN_BULLSEYE
 WORKDIR /
-COPY --from=builder /workspace/ipam-controller .
+COPY --from=builder /workspace/ipam-webhook .
 USER 65532:65532
 
-ENTRYPOINT ["/ipam-controller"]
+ENTRYPOINT ["/ipam-webhook"]
