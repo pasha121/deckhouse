@@ -30,7 +30,6 @@ type IPAddressLeaseSpec struct {
 
 // IPAddressLeaseStatus defines the observed state of IPAddressLease
 type IPAddressLeaseStatus struct {
-	Allocated bool `json:"allocated,omitempty"`
 }
 
 //+kubebuilder:object:root=true

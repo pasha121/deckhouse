@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	d8v1alpha1 "vmi-ipam-webhook/api/v1alpha1"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api"
 
 	goipam "github.com/metal-stack/go-ipam"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"

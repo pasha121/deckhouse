@@ -20,9 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	d8v1alpha1 "vmi-ipam-webhook/api/v1alpha1"
 	"vmi-ipam-webhook/controllers"
 	"vmi-ipam-webhook/webhooks"
+
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api"
 )
 
 type config struct {
