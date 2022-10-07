@@ -23,7 +23,7 @@ import (
 	"vmi-ipam-webhook/controllers"
 	"vmi-ipam-webhook/webhooks"
 
-	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 )
 
 type config struct {

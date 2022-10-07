@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api"
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 
 	"vmi-ipam-webhook/webhooks"
 
