@@ -17,13 +17,12 @@ limitations under the License.
 package hooks
 
 import (
-	"fmt"
-
+	"github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
+	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
 
 const (
@@ -31,26 +30,26 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/virtualization/d8vm-handler",
+	Queue: "/modules/virtualization/disks-handler",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       vmisSnapshot,
 			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "VirtualMachine",
-			FilterFunc: applyD8VMFilter,
+			Kind:       "Disk",
+			FilterFunc: applyDisksFilter,
 		},
 	},
-}, handleD8VM)
+}, handleDisks)
 
-func applyD8VMFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyDisksFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj, nil
 }
 
-// handleD8VM
+// handleDisks
 //
 // synopsis:
 //   TODO
-func handleD8VM(input *go_hook.HookInput) error {
+func handleDisks(input *go_hook.HookInput) error {
 	d8VMSnap := input.Snapshots[d8VMSnapshot]
 	if len(d8VMSnap) == 0 {
 		input.LogEntry.Warnln("VirtualMachine not found. Skip")
@@ -58,35 +57,27 @@ func handleD8VM(input *go_hook.HookInput) error {
 	}
 
 	for _, sRaw := range input.Snapshots[d8VMSnapshot] {
-		d8vm := sRaw.(v1alpha1.VirtualMachine)
-		requestedIP := *d8vm.Spec.StaticIPAddress
-
-		if isIPAllocated(requestedIP) {
-			ip, err := ensureIPAddressLease(requestedIP)
-			if err != nil {
-				return err
-			}
-			if !isIPUnused(requestedIP) {
-				return fmt.Errorf("requested ip is in use by other vm or reservation")
-			}
+		disk := sRaw.(v1alpha1.Disk)
+		datavolume := cdiv1.DataVolume{
+			ObjectMeta: disk.ObjectMeta,
 		}
-		createBootDiskForVM()
-		createKubeVirtVM()
+
+		datavolume.Spec.PVC.Resources.Requests[v1.ResourceStorage] = disk.Spec.Size
+
+		if disk.Spec.Source.Name != "" {
+			// TODO: read ImageSource
+			var imageSource v1alpha1.PublicImageSource
+			datavolume.Spec.Source = &imageSource.Spec
+		}
+
+		if disk.Spec.Type != "" {
+			// TODO: read DiskType
+			var diskType v1alpha1.DiskType
+			datavolume.Spec.PVC.AccessModes = diskType.Spec.AccessModes
+			datavolume.Spec.PVC.VolumeMode = diskType.Spec.VolumeMode
+			datavolume.Spec.Storage.StorageClassName = diskType.Spec.StorageClassName
+		}
+
 	}
 	return nil
-}
-
-func allocateIP(ip string) (string, error) {
-}
-
-func releaseIP(ip string) {
-}
-
-func ensureIPAddressLease(requestedIP string) (string, error) {
-	static := (requestedIP != "")
-	ip, err := allocateIP(ip)
-	if err != nil {
-		releaseIP(ip)
-	}
-	return ip, err
 }

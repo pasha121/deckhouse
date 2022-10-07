@@ -57,7 +57,10 @@ type BootDisk struct {
 
 // Represents the source of image used to create disk
 type ImageSource struct {
-	DiskSpec `json:""`
+	// Type represents the type for newly created disk
+	Type string `json:"type,omitempty"`
+	// Type represents the size for newly created disk
+	Size string `json:"size"`
 	// Name represents the name of the Image
 	Name string `json:"name"`
 	// Scope represents the source of Image
