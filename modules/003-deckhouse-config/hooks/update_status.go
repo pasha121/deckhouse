@@ -109,7 +109,7 @@ func updateDeckhouseConfigStatuses(input *go_hook.HookInput) error {
 		cfgStatus := d8config.Service().ConfigStatus().Get(cfg)
 		statusPatch := makeStatusPatch(cfg, cfgStatus)
 		if statusPatch != nil {
-			input.LogEntry.Infof("Patch /status for %s: enabled=%s, status=%s", cfg.GetName(), statusPatch.Enabled, statusPatch.Status)
+			input.LogEntry.Infof("Patch /status for %s: change (enabled=%s, status=%s) to enabled=%s, status=%s", cfg.GetName(), cfg.Status.Enabled, cfg.Status.Status, statusPatch.Enabled, statusPatch.Status)
 			input.PatchCollector.MergePatch(statusPatch, "deckhouse.io/v1", "DeckhouseConfig", "", cfg.GetName(), object_patch.WithSubresource("/status"))
 		}
 	}
