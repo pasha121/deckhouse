@@ -8,6 +8,10 @@ git:
     includePaths:
       - modules/*/openapi
       - global-hooks/openapi
+      # Include schemas from candi.
+      - candi/openapi/*
+      - candi/cloud-providers/*/openapi
+      # Include EE and FE modules.
 {{ if eq .Env "EE" }}
       - ee/modules/*/openapi
 {{ end }}
