@@ -8,11 +8,23 @@ git:
     includePaths:
       - modules/*/openapi
       - global-hooks/openapi
+{{ if eq .Env "EE" }}
+      - ee/modules/*/openapi
+{{ end }}
+{{ if eq .Env "FE" }}
+      - ee/modules/*/openapi
+      - ee/fe/modules/*/openapi
+{{ end }}
 import:
   - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/deckhouse-config-webhook
     to: /deckhouse-config-webhook
     before: setup
+shell:
+  install:
+    # Move ee/fe modules to MODULES_DIR.
+    - mv /deckhouse/ee/modules/* /deckhouse/modules || true
+    - mv /deckhouse/ee/fe/modules/* /deckhouse/modules || true
 docker:
   ENTRYPOINT: ["/deckhouse-config-webhook"]
 ---
@@ -28,6 +40,11 @@ shell:
     - cd {{ $webhookAbsPath }}
     - go mod download
   setup:
+    # Migrate ee/fe internal packages imports.
+#    - find /deckhouse/modules -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/modules|github.com/deckhouse/deckhouse/modules|g' {} +
+#    - find /deckhouse/modules -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/fe/modules|github.com/deckhouse/deckhouse/modules|g' {} +
+#    - find {{ $webhookAbsPath }} -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/modules|github.com/deckhouse/deckhouse/modules|g' {} +
+#    - find {{ $webhookAbsPath }} -type f -name '*.go' -exec sed -E -i 's|github.com/deckhouse/deckhouse/ee/fe/modules|github.com/deckhouse/deckhouse/modules|g' {} +
     - cd {{ $webhookAbsPath }}
     - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o deckhouse-config-webhook
     - mkdir /src
@@ -57,6 +74,13 @@ git:
     - go.mod
     - go.sum
     - modules/*/config-values-conversion/**/*.go
+{{ if eq .Env "EE" }}
+    - ee/modules/*/config-values-conversion/**/*.go
+{{ end }}
+{{ if eq .Env "FE" }}
+    - ee/modules/*/config-values-conversion/**/*.go
+    - ee/fe/modules/*/config-values-conversion/**/*.go
+{{ end }}
   excludePaths:
     - {{ $webhookRelPath }}
   stageDependencies:
@@ -68,6 +92,13 @@ git:
     setup:
       - go_lib/**/*.go
       - modules/*/config-values-conversion/**/*.go
+{{ if eq .Env "EE" }}
+      - ee/modules/*/config-values-conversion/**/*.go
+{{ end }}
+{{ if eq .Env "FE" }}
+      - ee/modules/*/config-values-conversion/**/*.go
+      - ee/fe/modules/*/config-values-conversion/**/*.go
+{{ end }}
 mount:
   - fromPath: ~/go-pkg-cache
     to: /go/pkg
