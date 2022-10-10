@@ -13,7 +13,7 @@ spec:
     listKind: IPAddressClaimList
     plural: ipaddressclaims
     singular: ipaddressclaim
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.static
@@ -42,6 +42,8 @@ spec:
               static:
                 description: Static represents the static claim
                 type: boolean
+              vmName:
+                type: string
             type: object
           status:
             description: IPAddressClaimStatus defines the observed state of IPAddressClaim

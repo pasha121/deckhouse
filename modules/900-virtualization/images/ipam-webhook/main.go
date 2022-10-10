@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"ipam-webhook/controllers"
+	"ipam-webhook/utils"
+	"ipam-webhook/webhooks"
 	"net"
 	"os"
-	"vmi-ipam-webhook/utils"
 
 	"github.com/sirupsen/logrus"
 	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
@@ -17,9 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
-
-	"vmi-ipam-webhook/controllers"
-	"vmi-ipam-webhook/webhooks"
 
 	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 
@@ -93,7 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	restClient, err := apiutil.RESTClientForGVK(d8v1alpha1.GroupVersion.WithKind("IPAddressLease"), false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
+	restClient, err := apiutil.RESTClientForGVK(d8v1alpha1.GroupVersion.WithKind("IPAddressClaim"), false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
 	if err != nil {
 		logger.Errorf("unable to create REST client: %s", err)
 		os.Exit(1)
@@ -114,7 +113,7 @@ func main() {
 	}
 
 	if err := mgr.Add(controller); err != nil {
-		logger.Errorf("unable to add ipaddressleases controller to manager %s", err)
+		logger.Errorf("unable to add ipaddressclaims controller to manager %s", err)
 		os.Exit(1)
 	}
 

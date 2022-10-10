@@ -3,10 +3,10 @@ package webhooks
 import (
 	"context"
 	"fmt"
+	"ipam-webhook/utils"
 	"net"
 	"net/http"
 	"os"
-	"vmi-ipam-webhook/utils"
 
 	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
@@ -30,7 +30,7 @@ func (v *IPAMValidatorWebhook) Start() {
 	// Create our validator
 	mcfg := kwhvalidating.WebhookConfig{
 		ID:        "ipamValidator",
-		Obj:       &d8v1alpha1.IPAddressLease{},
+		Obj:       &d8v1alpha1.IPAddressClaim{},
 		Validator: v,
 		Logger:    v.Logger,
 	}
@@ -57,9 +57,7 @@ func (v *IPAMValidatorWebhook) Start() {
 
 func (v *IPAMValidatorWebhook) Validate(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 	if _, ok := obj.(*d8v1alpha1.IPAddressClaim); !ok {
-		if _, ok := obj.(*d8v1alpha1.IPAddressLease); !ok {
-			return nil, fmt.Errorf("not an IPAddressClaim or IPAddressLease")
-		}
+		return nil, fmt.Errorf("not an IPAddressClaim")
 	}
 	ip := utils.NameToIP(obj.GetName())
 	if net.ParseIP(ip) == nil {
@@ -69,16 +67,16 @@ func (v *IPAMValidatorWebhook) Validate(_ context.Context, _ *kwhmodel.Admission
 		}, nil
 	}
 
-	if v.ipInRange(ip) {
+	if !v.ipInRange(ip) {
 		return &kwhvalidating.ValidatorResult{
 			Valid:   false,
-			Message: fmt.Sprintf("unable to find suitable CIDR for allocation, available ranges: %+v", v.CIDRs),
+			Message: fmt.Sprintf("unable to find suitable CIDR for IP address %s, available ranges: %+v", ip, v.CIDRs),
 		}, nil
 	}
 	if v.IPStore.IsAllocated(ip) {
 		return &kwhvalidating.ValidatorResult{
 			Valid:   false,
-			Message: "requested IP address is already allocated",
+			Message: fmt.Sprintf("requested IP address %s is already allocated", ip),
 		}, nil
 	}
 	return &kwhvalidating.ValidatorResult{
@@ -91,7 +89,7 @@ func (v *IPAMValidatorWebhook) GetHTTPHandler() (http.Handler, error) {
 	var whHandler http.Handler
 	mcfg := kwhvalidating.WebhookConfig{
 		ID:        "ipamValidator",
-		Obj:       &d8v1alpha1.IPAddressLease{},
+		Obj:       &d8v1alpha1.IPAddressClaim{},
 		Validator: v,
 		Logger:    v.Logger,
 	}

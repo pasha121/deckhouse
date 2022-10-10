@@ -19,10 +19,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"ipam-webhook/utils"
+	"ipam-webhook/webhooks"
 	"time"
-
-	"vmi-ipam-webhook/utils"
-	"vmi-ipam-webhook/webhooks"
 
 	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
@@ -42,13 +41,13 @@ type IPAMValidatorController struct {
 }
 
 func (c IPAMValidatorController) Start(ctx context.Context) error {
-	c.Logger.Infof("starting ipaddressleases controller")
+	c.Logger.Infof("starting ipaddressclaims controller")
 
-	lw := cache.NewListWatchFromClient(c.RESTClient, "ipaddressleases", v1.NamespaceAll, fields.Everything())
-	informer := cache.NewSharedIndexInformer(lw, &d8v1alpha1.IPAddressLease{}, 12*time.Hour,
+	lw := cache.NewListWatchFromClient(c.RESTClient, "ipaddressclaims", v1.NamespaceAll, fields.Everything())
+	informer := cache.NewSharedIndexInformer(lw, &d8v1alpha1.IPAddressClaim{}, 12*time.Hour,
 		cache.Indexers{
 			"namespace_name": func(obj interface{}) ([]string, error) {
-				return []string{obj.(*d8v1alpha1.IPAddressLease).GetName()}, nil
+				return []string{obj.(*d8v1alpha1.IPAddressClaim).GetName()}, nil
 			},
 		},
 	)
@@ -75,37 +74,37 @@ func (c IPAMValidatorController) Start(ctx context.Context) error {
 	go c.Webhook.Start()
 
 	<-ctx.Done()
-	c.Logger.Infof("shutting down ipaddressleases controller")
+	c.Logger.Infof("shutting down ipaddressclaims controller")
 
 	return nil
 }
 
 func (c *IPAMValidatorController) addFunc(obj interface{}) {
-	lease, ok := obj.(*d8v1alpha1.IPAddressLease)
+	claim, ok := obj.(*d8v1alpha1.IPAddressClaim)
 	if !ok {
-		// object is not IPAddressLease
+		// object is not IPAddressClaim
 		return
 	}
-	ip := utils.NameToIP(lease.GetName())
+	ip := utils.NameToIP(claim.GetName())
 	if ip == "" {
-		c.Logger.Errorf("failed to allocate %s, wrong name", lease.GetName())
+		c.Logger.Errorf("failed to allocate %s, wrong name", claim.GetName())
 		return
 	}
 	c.IPStore.Add(ip)
-	c.Logger.Infof("allocated %s", lease.GetName())
+	c.Logger.Infof("allocated %s", claim.GetName())
 }
 
 func (c *IPAMValidatorController) deleteFunc(obj interface{}) {
-	lease, ok := obj.(*d8v1alpha1.IPAddressLease)
+	claim, ok := obj.(*d8v1alpha1.IPAddressClaim)
 	if !ok {
-		// object is not IPAddressLease
+		// object is not IPAddressClaim
 		return
 	}
-	ip := utils.NameToIP(lease.GetName())
+	ip := utils.NameToIP(claim.GetName())
 	if ip == "" {
-		c.Logger.Errorf("failed to release %s, wrong name", lease.GetName())
+		c.Logger.Errorf("failed to release %s, wrong name", claim.GetName())
 		return
 	}
-	c.IPStore.Del(lease.GetName())
-	c.Logger.Infof("released %s", lease.GetName())
+	c.IPStore.Del(claim.GetName())
+	c.Logger.Infof("released %s", claim.GetName())
 }

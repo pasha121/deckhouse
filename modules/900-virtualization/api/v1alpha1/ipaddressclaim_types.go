@@ -23,7 +23,8 @@ import (
 // IPAddressClaimSpec defines the desired state of IPAddressClaim
 type IPAddressClaimSpec struct {
 	// Static represents the static claim
-	Static bool `json:"static,omitempty"`
+	Static bool   `json:"static,omitempty"`
+	VMName string `json:"vmName,omitempty"`
 }
 
 // IPAddressClaimStatus defines the observed state of IPAddressClaim
@@ -32,7 +33,6 @@ type IPAddressClaimStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
 //+kubebuilder:printcolumn:JSONPath=".spec.static",name=Static,type=string
 
 // IPAddressClaim is the Schema for the ipaddressclaims API
