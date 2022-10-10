@@ -9,7 +9,6 @@ import (
 	"vmi-ipam-webhook/utils"
 
 	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
-
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhlog "github.com/slok/kubewebhook/v2/pkg/log"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
@@ -62,11 +61,11 @@ func (v *IPAMValidatorWebhook) Validate(_ context.Context, _ *kwhmodel.Admission
 			return nil, fmt.Errorf("not an IPAddressClaim or IPAddressLease")
 		}
 	}
-	ip := obj.GetName()
+	ip := utils.NameToIP(obj.GetName())
 	if net.ParseIP(ip) == nil {
 		return &kwhvalidating.ValidatorResult{
 			Valid:   false,
-			Message: "metadata.name is not a valid IP address",
+			Message: "metadata.name does not contain a valid IP address",
 		}, nil
 	}
 

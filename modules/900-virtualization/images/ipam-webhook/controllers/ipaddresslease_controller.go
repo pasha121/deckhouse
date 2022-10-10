@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"time"
 
-	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
-
 	"vmi-ipam-webhook/utils"
 	"vmi-ipam-webhook/webhooks"
 
+	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -87,8 +86,13 @@ func (c *IPAMValidatorController) addFunc(obj interface{}) {
 		// object is not IPAddressLease
 		return
 	}
-	c.IPStore.Add(lease.Name)
-	c.Logger.Infof("allocated %s", lease.Name)
+	ip := utils.NameToIP(lease.GetName())
+	if ip == "" {
+		c.Logger.Errorf("failed to allocate %s, wrong name", lease.GetName())
+		return
+	}
+	c.IPStore.Add(ip)
+	c.Logger.Infof("allocated %s", lease.GetName())
 }
 
 func (c *IPAMValidatorController) deleteFunc(obj interface{}) {
@@ -97,6 +101,11 @@ func (c *IPAMValidatorController) deleteFunc(obj interface{}) {
 		// object is not IPAddressLease
 		return
 	}
-	c.IPStore.Del(lease.Name)
-	c.Logger.Infof("released %s", lease.Name)
+	ip := utils.NameToIP(lease.GetName())
+	if ip == "" {
+		c.Logger.Errorf("failed to release %s, wrong name", lease.GetName())
+		return
+	}
+	c.IPStore.Del(lease.GetName())
+	c.Logger.Infof("released %s", lease.GetName())
 }

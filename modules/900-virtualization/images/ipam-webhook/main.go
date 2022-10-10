@@ -16,11 +16,20 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/scheme"
 
 	"vmi-ipam-webhook/controllers"
 	"vmi-ipam-webhook/webhooks"
 
 	d8v1alpha1 "github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
+
+var (
+	GroupVersion  = schema.GroupVersion{Group: "deckhouse.io", Version: "v1alpha1"}
+	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	AddToScheme   = SchemeBuilder.AddToScheme
 )
 
 type config struct {
@@ -31,7 +40,7 @@ type config struct {
 	probeAddr   string
 }
 
-var scheme = runtime.NewScheme()
+var schemee = runtime.NewScheme()
 
 type cidrFlag []string
 
@@ -42,8 +51,8 @@ func (f *cidrFlag) Set(s string) error {
 }
 
 func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(d8v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(clientgoscheme.AddToScheme(schemee))
+	utilruntime.Must(d8v1alpha1.AddToScheme(schemee))
 }
 
 func main() {
@@ -74,7 +83,7 @@ func main() {
 
 	// create webhook
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
+		Scheme:                 schemee,
 		MetricsBindAddress:     cfg.metricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: cfg.probeAddr,
