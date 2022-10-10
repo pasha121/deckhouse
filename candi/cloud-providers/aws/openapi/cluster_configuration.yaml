@@ -76,7 +76,7 @@ apiVersions:
                 type: integer
               etcdDisk:
                 type: object
-                default: {}
+                default: {"sizeGb": 150, type: "gp2"}
                 properties:
                   sizeGb:
                     description: Etcd disk size in gigabytes.
