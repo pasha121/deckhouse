@@ -5,24 +5,24 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
   creationTimestamp: null
-  name: ipaddressleases.deckhouse.io
+  name: ipaddressclaims.deckhouse.io
 spec:
   group: deckhouse.io
   names:
-    kind: IPAddressLease
-    listKind: IPAddressLeaseList
-    plural: ipaddressleases
-    singular: ipaddresslease
+    kind: IPAddressClaim
+    listKind: IPAddressClaimList
+    plural: ipaddressclaims
+    singular: ipaddressclaim
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.owner
-      name: Owner
+    - jsonPath: .spec.static
+      name: Static
       type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: IPAddressLease is the Schema for the ipaddressleases API
+        description: IPAddressClaim is the Schema for the ipaddressclaims API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -37,10 +37,14 @@ spec:
           metadata:
             type: object
           spec:
-            description: IPAddressLeaseSpec defines the desired state of IPAddressLease
+            description: IPAddressClaimSpec defines the desired state of IPAddressClaim
+            properties:
+              static:
+                description: Static represents the static claim
+                type: boolean
             type: object
           status:
-            description: IPAddressLeaseStatus defines the observed state of IPAddressLease
+            description: IPAddressClaimStatus defines the observed state of IPAddressClaim
             type: object
         type: object
     served: true

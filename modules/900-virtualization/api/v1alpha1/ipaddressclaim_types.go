@@ -20,35 +20,39 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// IPAddressLeaseSpec defines the desired state of IPAddressLease
-type IPAddressLeaseSpec struct {
+// IPAddressClaimSpec defines the desired state of IPAddressClaim
+type IPAddressClaimSpec struct {
+	// Static represents the static claim
+	Static bool `json:"static,omitempty"`
 }
 
-// IPAddressLeaseStatus defines the observed state of IPAddressLease
-type IPAddressLeaseStatus struct {
+// IPAddressClaimStatus defines the observed state of IPAddressClaim
+type IPAddressClaimStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
-//+kubebuilder:printcolumn:JSONPath=".status.owner",name=Owner,type=string
+//+kubebuilder:printcolumn:JSONPath=".spec.static",name=Static,type=string
 
-// IPAddressLease is the Schema for the ipaddressleases API
-type IPAddressLease struct {
+// IPAddressClaim is the Schema for the ipaddressclaims API
+type IPAddressClaim struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IPAddressLeaseSpec   `json:"spec,omitempty"`
-	Status IPAddressLeaseStatus `json:"status,omitempty"`
+	Spec   IPAddressClaimSpec   `json:"spec,omitempty"`
+	Status IPAddressClaimStatus `json:"status,omitempty"`
 }
 
-// IPAddressLeaseList contains a list of IPAddressLease
-type IPAddressLeaseList struct {
+//+kubebuilder:object:root=true
+
+// IPAddressClaimList contains a list of IPAddressClaim
+type IPAddressClaimList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []IPAddressLease `json:"items"`
+	Items           []IPAddressClaim `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&IPAddressLease{}, &IPAddressLeaseList{})
+	SchemeBuilder.Register(&IPAddressClaim{}, &IPAddressClaimList{})
 }

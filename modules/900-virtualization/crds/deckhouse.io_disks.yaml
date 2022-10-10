@@ -36,8 +36,25 @@ spec:
             description: DiskSpec defines the desired state of Disk
             properties:
               size:
+                anyOf:
+                - type: integer
+                - type: string
                 description: Type represents the size for newly created disk
-                type: string
+                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                x-kubernetes-int-or-string: true
+              source:
+                description: Type represents the size for newly created disk
+                properties:
+                  name:
+                    description: Name represents the name of the Image
+                    type: string
+                  scope:
+                    description: 'Scope represents the source of Image supported values:
+                      global, private'
+                    type: string
+                required:
+                - name
+                type: object
               type:
                 description: Type represents the type for newly created disk
                 type: string
