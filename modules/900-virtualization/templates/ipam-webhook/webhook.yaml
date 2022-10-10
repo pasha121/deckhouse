@@ -1,21 +1,21 @@
 apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
+kind: ValidatingWebhookConfiguration
 metadata:
-  name: mutating-webhook.ipam.virtualization.deckhouse.io
+  name: validation-webhook.ipam.virtualization.deckhouse.io
   {{- include "helm_lib_module_labels" (list . (dict "app" "ipam-webhook")) | nindent 2 }}
 webhooks:
-- name: mutating-webhook.ipam.virtualization.deckhouse.io
+- name: validation-webhook.ipam.virtualization.deckhouse.io
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["v1alpha1"]
     operations:  ["CREATE", "UPDATE"]
-    resources:   ["ipaddressleases"]
+    resources:   ["ipaddressleases", "ipaddressclaims"]
     scope:       "*"
   clientConfig:
     service:
       namespace: "d8-virtualization"
       name: "ipam-webhook"
-      path: "/mutate"
+      path: "/validating"
       port: 8082
     caBundle: {{ .Values.virtualization.internal.webhookCert.ca | b64enc }}
   admissionReviewVersions: ["v1", "v1beta1"]

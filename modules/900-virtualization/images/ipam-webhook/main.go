@@ -1,16 +1,13 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
+	"net"
 	"os"
-	"sync"
-	"time"
+	"vmi-ipam-webhook/utils"
 
-	goipam "github.com/metal-stack/go-ipam"
 	"github.com/sirupsen/logrus"
-	"github.com/slok/kubewebhook/v2/pkg/log"
 	kwhlogrus "github.com/slok/kubewebhook/v2/pkg/log/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -63,34 +60,19 @@ func main() {
 
 	flag.Parse()
 
-	logger.Infof(fmt.Sprintf("managed CIDRs: %+v", cfg.cidrs))
-
-	// create a ipamer with in memory storage
-	ipam := goipam.New()
-	var pendingLeases sync.Map
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	var prefixes []*goipam.Prefix
+	var parsedCIDRs []*net.IPNet
 	for _, cidr := range cfg.cidrs {
-		prefix, err := ipam.NewPrefix(ctx, cidr)
-		if err != nil {
-			logger.Errorf("error creating new prefix for IPAM: %s", err)
+		_, parsedCIDR, err := net.ParseCIDR(cidr)
+		if err != nil || parsedCIDR == nil {
+			fmt.Println(err, "failed to parse CIDR")
 			os.Exit(1)
 		}
-		prefixes = append(prefixes, prefix)
+		parsedCIDRs = append(parsedCIDRs, parsedCIDR)
 	}
 
-	// pass webhook parameters
-	// TODO: get rid of this shit
-	webhooks.Logger = logger
-	webhooks.CertFile = cfg.certFile
-	webhooks.KeyFile = cfg.keyFile
-	webhooks.IPAM = ipam
-	webhooks.PendingLeases = &pendingLeases
-	webhooks.Prefixes = prefixes
+	logger.Infof("managed CIDRs: %+v", cfg.cidrs)
 
+	// create webhook
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     cfg.metricsAddr,
@@ -107,14 +89,19 @@ func main() {
 		logger.Errorf("unable to create REST client: %s", err)
 		os.Exit(1)
 	}
+	ipStore := utils.NewIPStore()
 
-	controller := controllers.IPAddressLeaseController{
-		RESTClient:    restClient,
-		Ipam:          ipam,
-		Log:           logger,
-		Prefixes:      prefixes,
-		PendingLeases: &pendingLeases,
-		// TODO: enable leader election
+	controller := controllers.IPAMValidatorController{
+		RESTClient: restClient,
+		Logger:     logger,
+		IPStore:    ipStore,
+		Webhook: &webhooks.IPAMValidatorWebhook{
+			Logger:   logger,
+			CertFile: cfg.certFile,
+			KeyFile:  cfg.keyFile,
+			CIDRs:    parsedCIDRs,
+			IPStore:  ipStore,
+		},
 	}
 
 	if err := mgr.Add(controller); err != nil {
@@ -131,33 +118,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger.Infof("starting cleaner")
-	go cleaner(ipam, &pendingLeases, logger)
-
 	logger.Infof("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		logger.Errorf("problem running manager: %s", err)
 		os.Exit(1)
 	}
 
-}
-
-func cleaner(ipam goipam.Ipamer, pendingLeases *sync.Map, logger log.Logger) {
-	for {
-		time.Sleep(1 * time.Second)
-		pendingLeases.Range(func(k, v interface{}) bool {
-			lease := v.(webhooks.Lease)
-			if time.Now().Sub(lease.Time) < (5 * time.Second) {
-				return true
-			}
-			_, err := ipam.ReleaseIP(context.TODO(), lease.IP)
-			if err != nil {
-				logger.Errorf("error releasing ip: %s", lease.IP.IP.String(), err)
-				os.Exit(1)
-			}
-			pendingLeases.Delete(k)
-			logger.Warningf("releasing ip %s as it has not appeared", lease.IP.IP.String())
-			return true
-		})
-	}
 }
