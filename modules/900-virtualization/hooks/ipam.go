@@ -20,11 +20,12 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 )
 
 const (
@@ -89,7 +90,7 @@ CLAIM_LOOP:
 
 		for _, dRaw := range input.Snapshots[vmsSnapshot] {
 			vm := dRaw.(v1alpha1.VirtualMachine)
-			if claim.Namespace != claim.Namespace {
+			if claim.Namespace != vm.Namespace {
 				continue
 			}
 			if claim.Spec.VMName != vm.Name {

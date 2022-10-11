@@ -132,14 +132,14 @@ func prepareVirtRegistrySecret(namespace, dockerCfg string) *corev1.Secret {
 //   Every namespace running virtual machines, must contain registry
 //   secret to be able pulling the virt-launcher image.
 //   The virt-launcher image re-pushed in deckhouse registry to make
-//   it possible to run in closed enviroments.
+//   it possible to run in closed environments.
 //   If in namespace delete all VMIs then registry secret must be deleted.
 //   We do not use ownerReferences because virt-controller may to create
 //   multiple VMIs in one namespace in one time.
 //
 //   We have patched virt-controller for specifying image pull-secrets
 //   for envery VMI pod. This is temproray solution, until kubevirt
-//   will have native oportunity for specifying registrySecrets.
+//   will have native opportunity for specifying registrySecrets.
 func handleVMI(input *go_hook.HookInput) error {
 	d8RegistrySnap := input.Snapshots[d8RegistrySnapshot]
 	if len(d8RegistrySnap) == 0 {
@@ -167,7 +167,6 @@ func handleVMI(input *go_hook.HookInput) error {
 			secret := prepareVirtRegistrySecret(ns, registryCfg)
 			input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
 		}
-
 	}
 
 	// gc secrets

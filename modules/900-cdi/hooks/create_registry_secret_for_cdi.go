@@ -138,12 +138,12 @@ func prepareVirtRegistrySecret(namespace, dockerCfg string) *corev1.Secret {
 //   Every namespace running cdi workload pod, must contain registry
 //   secret to be able pulling cdi images.
 //   The cdi images re-pushed in deckhouse registry to make
-//   them possible to run in closed enviroments.
+//   them possible to run in closed environments.
 //   After CDI pod is finished the registry secret must be deleted.
 //
 //   We have patched cdi-controller for specifying image pull-secrets
 //   for envery VMI pod. This is temproray solution, until kubevirt
-//   will have native oportunity for specifying registrySecrets.
+//   will have native opportunity for specifying registrySecrets.
 func handleCDIPod(input *go_hook.HookInput) error {
 	d8RegistrySnap := input.Snapshots[d8RegistrySnapshot]
 	if len(d8RegistrySnap) == 0 {
@@ -171,7 +171,6 @@ func handleCDIPod(input *go_hook.HookInput) error {
 			secret := prepareVirtRegistrySecret(ns, registryCfg)
 			input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
 		}
-
 	}
 
 	// gc secrets
