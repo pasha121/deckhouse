@@ -27,7 +27,7 @@ require (
 	github.com/gophercloud/utils v0.0.0-20210823151123-bfd010397530
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
-	github.com/imdario/mergo v0.3.12
+	github.com/imdario/mergo v0.3.11
 	github.com/kyokomi/emoji v2.1.0+incompatible
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/onsi/ginkgo v1.16.5
@@ -48,15 +48,15 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.5.1
-	k8s.io/api v0.23.5
-	k8s.io/apiextensions-apiserver v0.23.5
-	k8s.io/apimachinery v0.23.5
-	k8s.io/apiserver v0.21.4
-	k8s.io/client-go v11.0.0+incompatible
+	k8s.io/api v0.21.4
+	k8s.io/apiextensions-apiserver v0.20.5
+	k8s.io/apimachinery v0.21.4
+	k8s.io/apiserver v0.20.5
+	k8s.io/client-go v0.21.4
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
-	kubevirt.io/api v0.57.1
-	kubevirt.io/containerized-data-importer-api v1.55.0
-	sigs.k8s.io/controller-runtime v0.9.0
+	kubevirt.io/api v0.49.0
+	kubevirt.io/containerized-data-importer-api v1.42.1
+	sigs.k8s.io/controller-runtime v0.8.3
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -66,15 +66,6 @@ replace github.com/deckhouse/deckhouse/dhctl => ./dhctl
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
 
 // Due to Helm3 lib problems
-replace (
-	k8s.io/api => k8s.io/api v0.19.11
-	k8s.io/client-go => k8s.io/client-go v0.19.11
-)
+replace k8s.io/client-go => k8s.io/client-go v0.19.11
 
-// And KubeVirt lib problems due to Helm3 lib problems
-replace (
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.4
-	k8s.io/apimachinery => k8s.io/apimachinery v0.19.11
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.19.11
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20211110013926-83f114cd0513
-)
+replace k8s.io/api => k8s.io/api v0.19.11

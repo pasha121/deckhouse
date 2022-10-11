@@ -70,7 +70,7 @@ type ImageSource struct {
 	Ephemeral bool `json:"ephemeral,omitempty"`
 	// Bus indicates the type of disk device to emulate.
 	// supported values: virtio, sata, scsi, usb.
-	Bus k6tv1.DiskBus `json:"bus,omitempty"`
+	Bus string `json:"bus,omitempty"`
 }
 
 // ImageSourceScope represents the source of the image.
@@ -96,7 +96,7 @@ type DiskSource struct {
 	Hotpluggable bool `json:"hotpluggable,omitempty"`
 	// Bus indicates the type of disk device to emulate.
 	// supported values: virtio, sata, scsi, usb.
-	Bus k6tv1.DiskBus `json:"bus,omitempty"`
+	Bus string `json:"bus,omitempty"`
 }
 
 //+kubebuilder:object:root=true
