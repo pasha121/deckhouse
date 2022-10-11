@@ -25,10 +25,10 @@ import (
 // VirtualMachineSpec defines the desired state of VirtualMachine
 type VirtualMachineSpec struct {
 	Running         *bool                         `json:"running,omitempty" optional:"true"`
-	StaticIPAddress *string                       `json:"staticIPAddress,omitempty"`
+	StaticIPAddress string                        `json:"staticIPAddress,omitempty"`
 	Resources       v1.ResourceList               `json:"resources,omitempty"`
-	UserName        *string                       `json:"userName,omitempty"`
-	SSHPublicKey    *string                       `json:"sshPublicKey,omitempty"`
+	UserName        string                        `json:"userName,omitempty"`
+	SSHPublicKey    string                        `json:"sshPublicKey,omitempty"`
 	BootDisk        BootDisk                      `json:"bootDisk,omitempty"`
 	CloudInit       *k6tv1.CloudInitNoCloudSource `json:"cloudInit,omitempty"`
 	Disks           *[]DiskSource                 `json:"disks,omitempty"`

@@ -514,27 +514,12 @@ func (in *VirtualMachineSpec) DeepCopyInto(out *VirtualMachineSpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.StaticIPAddress != nil {
-		in, out := &in.StaticIPAddress, &out.StaticIPAddress
-		*out = new(string)
-		**out = **in
-	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
 		*out = make(v1.ResourceList, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val.DeepCopy()
 		}
-	}
-	if in.UserName != nil {
-		in, out := &in.UserName, &out.UserName
-		*out = new(string)
-		**out = **in
-	}
-	if in.SSHPublicKey != nil {
-		in, out := &in.SSHPublicKey, &out.SSHPublicKey
-		*out = new(string)
-		**out = **in
 	}
 	out.BootDisk = in.BootDisk
 	if in.CloudInit != nil {

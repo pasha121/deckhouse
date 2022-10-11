@@ -8,7 +8,7 @@ webhooks:
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["v1alpha1"]
-    operations:  ["CREATE", "UPDATE"]
+    operations:  ["CREATE"]
     resources:   ["ipaddressleases", "ipaddressclaims"]
     scope:       "*"
   clientConfig:
