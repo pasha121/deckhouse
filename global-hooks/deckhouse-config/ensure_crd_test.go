@@ -17,20 +17,14 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/go-openapi/spec"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
-
-	d8config_v1 "github.com/deckhouse/deckhouse/go_lib/deckhouse-config/v1"
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 // TODO (future) make this test more generic to be available for all modules with CRDs.
@@ -135,7 +129,7 @@ spec:
 	}
 )
 
-var _ = FDescribe("Module :: deckhouse-config :: ModuleConfig CRs ::", func() {
+var _ = Describe("Module :: deckhouse-config :: ModuleConfig CRs ::", func() {
 	s, loadErr := crdValidator(moduleConfigCRDPath)
 
 	Context("schema loader", func() {
@@ -253,24 +247,4 @@ func validateManifest(yamlManifest string, s *spec.Schema) (multiErr error) {
 	}
 
 	return validation.ValidateObject(obj.UnstructuredContent(), s, "")
-}
-
-func createModuleConfig(f *HookExecutionConfig, manifests ...string) error {
-	for _, manifest := range manifests {
-		list := strings.Split(manifest, "---")
-		for _, item := range list {
-			var obj unstructured.Unstructured
-			err := yaml.Unmarshal([]byte(item), &obj)
-			if err != nil {
-				return fmt.Errorf("parsing manifest\n%s\n: %v", item, err)
-			}
-
-			_, err = f.KubeClient().Dynamic().Resource(d8config_v1.GroupVersionResource()).
-				Create(context.TODO(), &obj, metav1.CreateOptions{})
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
