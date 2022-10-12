@@ -119,7 +119,7 @@ func handleVMsAndIPs(input *go_hook.HookInput) error {
 
 CLAIM_LOOP:
 	// Handle IPAddressClaims
-	for _, sRaw := range input.Snapshots[ipsSnapshot] {
+	for _, sRaw := range ipSnap {
 		claim := sRaw.(*IPAddressClaimSnapshot)
 
 		// Address is static, but currently not in use
@@ -128,7 +128,7 @@ CLAIM_LOOP:
 			continue CLAIM_LOOP
 		}
 
-		for _, dRaw := range input.Snapshots[vmsSnapshot] {
+		for _, dRaw := range vmSnap {
 			vm := dRaw.(*VirtualMachineSnapshot)
 
 			if claim.Namespace != vm.Namespace {
@@ -195,7 +195,7 @@ CLAIM_LOOP:
 	}
 
 	// Handle VMs
-	for _, sRaw := range input.Snapshots[vmsSnapshot] {
+	for _, sRaw := range vmSnap {
 		vm := sRaw.(*VirtualMachineSnapshot)
 
 		ip := vm.StaticIPAddress

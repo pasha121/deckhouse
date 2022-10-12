@@ -21,6 +21,10 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
@@ -67,16 +71,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 type DiskTypeSnapshot struct {
 	Name      string
 	Namespace string
+	Spec      v1alpha1.DiskTypeSpec
 }
 
 type DiskSnapshot struct {
 	Name      string
 	Namespace string
+	Type      string
+	Size      resource.Quantity
+	Source    v1alpha1.ImageSourceRef
 }
 
 type PublicImageSourceSnapshot struct {
 	Name      string
 	Namespace string
+	Source    cdiv1.DataVolumeSource
 }
 
 type DataVolumeSnapshot struct {
@@ -94,6 +103,7 @@ func applyDiskTypeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	return &DiskTypeSnapshot{
 		Name:      diskType.Name,
 		Namespace: diskType.Namespace,
+		Spec:      diskType.Spec,
 	}, nil
 }
 
@@ -104,22 +114,26 @@ func applyDiskFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 		return nil, fmt.Errorf("cannot convert object to Disk: %v", err)
 	}
 
-	return &VirtualMachineSnapshot{
+	return &DiskSnapshot{
 		Name:      disk.Name,
 		Namespace: disk.Namespace,
+		Type:      disk.Spec.Type,
+		Size:      disk.Spec.Size,
+		Source:    disk.Spec.Source,
 	}, nil
 }
 
 func applyPublicImageSourceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	volume := &v1alpha1.PublicImageSource{}
-	err := sdk.FromUnstructured(obj, volume)
+	publicImageSource := &v1alpha1.PublicImageSource{}
+	err := sdk.FromUnstructured(obj, publicImageSource)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert object to DataVolume: %v", err)
 	}
 
-	return &DataVolumeSnapshot{
-		Name:      volume.Name,
-		Namespace: volume.Namespace,
+	return &PublicImageSourceSnapshot{
+		Name:      publicImageSource.Name,
+		Namespace: publicImageSource.Namespace,
+		Source:    publicImageSource.Spec,
 	}, nil
 }
 
@@ -141,5 +155,96 @@ func applyDataVolumeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 // synopsis:
 //   TODO
 func handleDisks(input *go_hook.HookInput) error {
+	diskTypeSnap := input.Snapshots[diskTypesSnapshot]
+	diskSnap := input.Snapshots[disksSnapshot]
+	publicImageSourceSnap := input.Snapshots[publicImageSourcesSnapshot]
+	dataVolumeSnap := input.Snapshots[dataVolumeSnapshot]
+
+	if len(diskSnap) == 0 && len(diskTypeSnap) == 0 {
+		input.LogEntry.Warnln("Disk and DiskType not found. Skip")
+		return nil
+	}
+
+	for _, sRaw := range diskSnap {
+		disk := sRaw.(*DiskSnapshot)
+		for _, dRaw := range dataVolumeSnap {
+			dataVolume := dRaw.(*DataVolumeSnapshot)
+			if dataVolume.Namespace != disk.Namespace {
+				continue
+			}
+			if dataVolume.Name != disk.Name {
+				continue
+			}
+			// DataVolume found
+			continue
+		}
+		// DataVolume not found, needs to create a new one
+
+		var diskTypeSpec v1alpha1.DiskTypeSpec
+		var diskTypeFound bool
+		for _, dRaw := range diskTypeSnap {
+			diskType := dRaw.(*DiskTypeSnapshot)
+			if diskType.Name == disk.Type {
+				diskTypeSpec = diskType.Spec
+				diskTypeFound = true
+			}
+		}
+		if !diskTypeFound {
+			input.LogEntry.Warnln("DiskType not found. Skip")
+			continue
+		}
+
+		var imageSource cdiv1.DataVolumeSource
+		if disk.Source.Name != "" {
+			var imageSourceFound bool
+			if disk.Source.Scope == v1alpha1.ImageSourceScopeGlobal || disk.Source.Scope == "" {
+				for _, dRaw := range publicImageSourceSnap {
+					publicImageSource := dRaw.(*PublicImageSourceSnapshot)
+					if publicImageSource.Name == disk.Source.Name {
+						imageSource = publicImageSource.Source
+						imageSourceFound = true
+					}
+				}
+			}
+			if disk.Source.Scope == v1alpha1.ImageSourceScopePrivate || disk.Source.Scope == "" && !imageSourceFound {
+				// TODO handle privateImageSource
+			}
+			if !imageSourceFound {
+				input.LogEntry.Warnln("ImageSource not found. Skip")
+				continue
+			}
+		} else {
+			imageSource = cdiv1.DataVolumeSource{
+				Blank: &cdiv1.DataVolumeBlankImage{},
+			}
+		}
+
+		dataVolume := &cdiv1.DataVolume{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "DataVolume",
+				APIVersion: "cdi.kubevirt.io/v1beta1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				Name:      disk.Name,
+				Namespace: disk.Namespace,
+			},
+			Spec: cdiv1.DataVolumeSpec{
+				Source: &imageSource,
+				PVC: &corev1.PersistentVolumeClaimSpec{
+					AccessModes:      diskTypeSpec.AccessModes,
+					StorageClassName: diskTypeSpec.StorageClassName,
+					VolumeMode:       diskTypeSpec.VolumeMode,
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: disk.Size,
+						},
+					},
+				},
+			},
+		}
+		_ = dataVolume
+		input.PatchCollector.Create(dataVolume)
+	}
+
 	return nil
 }
