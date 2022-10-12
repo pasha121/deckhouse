@@ -31,13 +31,12 @@ import (
 )
 
 const (
-	ipsSnapshot = "ipclaim"
-	vmsSnapshot = "vm"
-	gv          = "deckhouse.io/v1alpha1"
+	ipsSnapshot = "ipamIP"
+	vmsSnapshot = "ipamVM"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/virtualization/vms-and-ip-handler",
+	Queue: "/modules/virtualization/ipam-handler",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       ipsSnapshot,

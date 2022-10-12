@@ -26,11 +26,6 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-const (
-	initValuesString       = `{"virtualization":{"internal":{"webhookCert":{}},"vmCIDRs":["10.10.10.0/24"]},"global":{"discovery":{"clusterDomain":"mycluster.local"}}}`
-	initConfigValuesString = `{}`
-)
-
 var _ = Describe("Modules :: virtualization :: hooks :: generate_certs ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 

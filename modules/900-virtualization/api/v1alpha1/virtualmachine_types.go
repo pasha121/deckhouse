@@ -19,25 +19,25 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k6tv1 "kubevirt.io/api/core/v1"
+	virtv1 "kubevirt.io/api/core/v1"
 )
 
 // VirtualMachineSpec defines the desired state of VirtualMachine
 type VirtualMachineSpec struct {
-	Running         *bool                         `json:"running,omitempty" optional:"true"`
-	StaticIPAddress string                        `json:"staticIPAddress,omitempty"`
-	Resources       v1.ResourceList               `json:"resources,omitempty"`
-	UserName        string                        `json:"userName,omitempty"`
-	SSHPublicKey    string                        `json:"sshPublicKey,omitempty"`
-	BootDisk        BootDisk                      `json:"bootDisk,omitempty"`
-	CloudInit       *k6tv1.CloudInitNoCloudSource `json:"cloudInit,omitempty"`
-	Disks           *[]DiskSource                 `json:"disks,omitempty"`
+	Running         *bool                          `json:"running,omitempty" optional:"true"`
+	StaticIPAddress string                         `json:"staticIPAddress,omitempty"`
+	Resources       v1.ResourceList                `json:"resources,omitempty"`
+	UserName        string                         `json:"userName,omitempty"`
+	SSHPublicKey    string                         `json:"sshPublicKey,omitempty"`
+	BootDisk        BootDisk                       `json:"bootDisk,omitempty"`
+	CloudInit       *virtv1.CloudInitNoCloudSource `json:"cloudInit,omitempty"`
+	Disks           *[]DiskSource                  `json:"disks,omitempty"`
 }
 
 // VirtualMachineStatus defines the observed state of VirtualMachine
 type VirtualMachineStatus struct {
 	// Phase is a human readable, high-level representation of the status of the virtual machine
-	Phase k6tv1.VirtualMachinePrintableStatus `json:"phase,omitempty"`
+	Phase virtv1.VirtualMachinePrintableStatus `json:"phase,omitempty"`
 	// NodeName is the name where the VirtualMachineInstance is currently running.
 	NodeName string `json:"nodeName,omitempty"`
 	// IP address of Virtual Machine
