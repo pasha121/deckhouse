@@ -163,6 +163,9 @@ spec:
           status:
             description: VirtualMachineStatus defines the observed state of VirtualMachine
             properties:
+              ipAddress:
+                description: IP address of Virtual Machine
+                type: string
               nodeName:
                 description: NodeName is the name where the VirtualMachineInstance
                   is currently running.
@@ -170,9 +173,6 @@ spec:
               phase:
                 description: Phase is a human readable, high-level representation
                   of the status of the virtual machine
-                type: string
-              vmIP:
-                description: IP address of Virtual Machine
                 type: string
             type: object
         type: object

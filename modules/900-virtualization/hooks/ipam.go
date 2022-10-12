@@ -22,8 +22,11 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 )
@@ -35,7 +38,7 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/virtualization/disks-handler",
+	Queue: "/modules/virtualization/vms-and-ip-handler",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       ipsSnapshot,
@@ -53,7 +56,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleVMsAndIPs)
 
 func applyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj, nil
+	return obj.UnstructuredContent(), nil
 }
 
 // handleDisks
@@ -63,8 +66,8 @@ func applyFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 func handleVMsAndIPs(input *go_hook.HookInput) error {
 	ipSnap := input.Snapshots[ipsSnapshot]
 	vmSnap := input.Snapshots[vmsSnapshot]
-	if len(ipSnap) == 0 || len(vmSnap) == 0 {
-		input.LogEntry.Warnln("IPAdressClaim and VirtualMachine not found. Skip")
+	if len(ipSnap) == 0 && len(vmSnap) == 0 {
+		input.LogEntry.Warnln("IPAddressClaim and VirtualMachine not found. Skip")
 		return nil
 	}
 
@@ -73,7 +76,9 @@ func handleVMsAndIPs(input *go_hook.HookInput) error {
 CLAIM_LOOP:
 	// Handle IPAddressClaims
 	for _, sRaw := range input.Snapshots[ipsSnapshot] {
-		claim := sRaw.(v1alpha1.IPAddressClaim)
+		var claim v1alpha1.IPAddressClaim
+		uns := sRaw.(map[string]interface{})
+		runtime.DefaultUnstructuredConverter.FromUnstructured(uns, &claim)
 
 		// Get IP address from claim name
 		ip := nameToIP(claim.Name)
@@ -89,7 +94,10 @@ CLAIM_LOOP:
 		}
 
 		for _, dRaw := range input.Snapshots[vmsSnapshot] {
-			vm := dRaw.(v1alpha1.VirtualMachine)
+			var vm v1alpha1.VirtualMachine
+			uns := dRaw.(map[string]interface{})
+			runtime.DefaultUnstructuredConverter.FromUnstructured(uns, &vm)
+
 			if claim.Namespace != vm.Namespace {
 				continue
 			}
@@ -103,9 +111,9 @@ CLAIM_LOOP:
 				input.LogEntry.Warnf("VM %s/%s for IP %s is found, but other IP %s requested, releasing", vm.Namespace, vm.Name, claim.Name, vm.Spec.StaticIPAddress)
 				if claim.Spec.Static {
 					patch := map[string]interface{}{"spec": map[string]string{"vmName": ""}}
-					input.PatchCollector.MergePatch(patch, gv, "IPAdressClaim", claim.Namespace, claim.Name)
+					input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", claim.Namespace, claim.Name)
 				} else {
-					input.PatchCollector.Delete(gv, "IPAdressClaim", claim.Namespace, claim.Name)
+					input.PatchCollector.Delete(gv, "IPAddressClaim", claim.Namespace, claim.Name)
 					continue CLAIM_LOOP
 				}
 			}
@@ -113,7 +121,12 @@ CLAIM_LOOP:
 			// VM requested static IP, mark claim as static
 			if vm.Spec.StaticIPAddress == ip && !claim.Spec.Static {
 				patch := map[string]interface{}{"spec": map[string]bool{"static": true}}
-				input.PatchCollector.MergePatch(patch, gv, "IPAdressClaim", claim.Namespace, claim.Name)
+				input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", claim.Namespace, claim.Name)
+			}
+
+			if vm.Status.IPAddress != ip {
+				patch := map[string]interface{}{"status": map[string]string{"ipAddress": ip}}
+				input.PatchCollector.MergePatch(patch, gv, "VirtualMachine", vm.Namespace, vm.Name, object_patch.WithSubresource("/status"))
 			}
 
 			// Add IP to allocation map
@@ -121,8 +134,21 @@ CLAIM_LOOP:
 			continue CLAIM_LOOP
 		}
 
-		// VM is not found, claim is not static, thus it can be deleted
-		input.PatchCollector.Delete(gv, "IPAdressClaim", claim.Namespace, claim.Name)
+		// VM is not found, release the dynamic lease
+		if !claim.Spec.Static {
+			input.PatchCollector.Delete(gv, "IPAddressClaim", claim.Namespace, claim.Name)
+			continue CLAIM_LOOP
+		}
+
+		// VM is not found, preserve the static lease
+		if claim.Spec.VMName != "" {
+			patch := map[string]interface{}{"spec": map[string]string{"vmName": ""}}
+			input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", claim.Namespace, claim.Name)
+		}
+
+		// Add IP to allocation map
+		allocatedIPs[ip] = ""
+		continue CLAIM_LOOP
 	}
 
 	// Load CIDRs from config
@@ -137,57 +163,84 @@ CLAIM_LOOP:
 
 	// Handle VMs
 	for _, sRaw := range input.Snapshots[vmsSnapshot] {
-		vm := sRaw.(v1alpha1.VirtualMachine)
+		var vm v1alpha1.VirtualMachine
+		uns := sRaw.(map[string]interface{})
+		runtime.DefaultUnstructuredConverter.FromUnstructured(uns, &vm)
+
 		ip := vm.Spec.StaticIPAddress
+		leaseFound := false
 		if ip == "" {
-			ip = findFreeIP(&parsedCIDRs, allocatedIPs)
+			ip, leaseFound = allocateIPForVM(&parsedCIDRs, allocatedIPs, vm.Namespace+"/"+vm.Name)
+			if ip == "" {
+				input.LogEntry.Errorf("Error allocating new IP Address for VM %s/%s", vm.Namespace, vm.Name)
+				continue
+			}
+		}
+
+		if vm.Status.IPAddress != ip {
+			//patch := map[string]interface{}{"status": map[string]string{"ipAddress": ip}}
+			patch := map[string]interface{}{"status": map[string]interface{}{"ipAddress": ip}}
+			input.PatchCollector.MergePatch(patch, gv, "VirtualMachine", vm.Namespace, vm.Name, object_patch.WithSubresource("/status"))
 		}
 
 		// Handle case when VM requested static IP
-		if vmString, ok := allocatedIPs[ip]; ok {
+		if leaseFound {
+			vmString := allocatedIPs[ip]
 			if vmString == "" {
 				// Static Claim is found, needs to update vmName
 				patch := map[string]interface{}{"spec": map[string]string{"vmName": ""}}
-				input.PatchCollector.MergePatch(patch, gv, "IPAdressClaim", vm.Namespace, ipToName(ip))
+				input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", vm.Namespace, ipToName(ip))
+				allocatedIPs[ip] = vm.Namespace + "/" + vm.Name
 			} else if vmString != vm.Namespace+"/"+vm.Name {
 				// Static Claim is found, but it is in use by other VM
 				input.LogEntry.Warnf("VM %s/%s requested IP %s, but it is already allocated for %s", vm.Namespace, vm.Name, ip, vmString)
 				continue
 			}
-
-			// Claim is not found, create a new one
-			claim := &v1alpha1.IPAddressClaim{
-				ObjectMeta: v1.ObjectMeta{
-					Name:      ipToName(ip),
-					Namespace: vm.Namespace,
-				},
-				Spec: v1alpha1.IPAddressClaimSpec{
-					VMName: vm.Name,
-				},
-			}
-			if vm.Spec.StaticIPAddress != "" {
-				claim.Spec.Static = true
-			}
-			input.PatchCollector.Create(claim)
-
-			// Add IP to allocation map
-			allocatedIPs[ip] = vm.Namespace + "/" + vm.Name
+			continue
 		}
+
+		// Claim is not found, create a new one
+		claim := &v1alpha1.IPAddressClaim{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "IPAddressClaim",
+				APIVersion: gv,
+			},
+			ObjectMeta: v1.ObjectMeta{
+				Name:      ipToName(ip),
+				Namespace: vm.Namespace,
+			},
+			Spec: v1alpha1.IPAddressClaimSpec{
+				VMName: vm.Name,
+			},
+		}
+		if vm.Spec.StaticIPAddress != "" {
+			claim.Spec.Static = true
+		}
+		input.PatchCollector.Create(claim)
+
+		// Add IP to allocation map
+		allocatedIPs[ip] = vm.Namespace + "/" + vm.Name
 	}
 
 	return nil
 }
 
-func findFreeIP(parsedCIDRs *[]*net.IPNet, allocatedIPs map[string]string) string {
+func allocateIPForVM(parsedCIDRs *[]*net.IPNet, allocatedIPs map[string]string, vmString string) (string, bool) {
+	for k, v := range allocatedIPs {
+		if v == vmString {
+			return k, true
+		}
+	}
+
 	for _, cidr := range *parsedCIDRs {
 		ip := cidr.IP
 		for ip := ip.Mask(cidr.Mask); cidr.Contains(ip); inc(ip) {
 			if _, ok := allocatedIPs[ip.String()]; !ok {
-				return ip.String()
+				return ip.String(), false
 			}
 		}
 	}
-	return ""
+	return "", false
 }
 
 //  http://play.golang.org/p/m8TNTtygK0

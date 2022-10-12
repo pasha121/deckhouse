@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 var _ = Describe("Modules :: virtualization :: hooks :: ipam ::", func() {
@@ -32,7 +33,6 @@ var _ = Describe("Modules :: virtualization :: hooks :: ipam ::", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.KubeStateSet(``),
-				f.GenerateBeforeHelmContext(),
 			)
 			f.RunHook()
 		})
@@ -41,4 +41,123 @@ var _ = Describe("Modules :: virtualization :: hooks :: ipam ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 		})
 	})
+
+	Context("IPAM", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(
+				f.KubeStateSet(`
+apiVersion: deckhouse.io/v1alpha1
+kind: IPAddressClaim
+metadata:
+  name: ip-10-10-10-0
+  namespace: ns1
+spec:
+  vmName: existing-vm
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachine
+metadata:
+  name: existing-vm
+  namespace: ns1
+status:
+  ipAddress: 10.10.10.10
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IPAddressClaim
+metadata:
+  name: ip-10-10-10-1
+  namespace: ns1
+spec:
+  vmName: removed-vm
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IPAddressClaim
+metadata:
+  name: ip-10-10-10-2
+  namespace: ns1
+spec:
+  static: true
+  vmName: missing-vm
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IPAddressClaim
+metadata:
+  name: ip-10-10-10-123
+  namespace: ns1
+spec:
+  vmName: missing-vm2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachine
+metadata:
+  name: vm1
+  namespace: ns2
+spec:
+  running: true
+  staticIPAddress: 10.10.10.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachine
+metadata:
+  name: vm2
+  namespace: ns2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: VirtualMachine
+metadata:
+  name: vm3
+  namespace: ns2
+`),
+			)
+			f.RunHook()
+		})
+
+		It("Manages IPAddressClaims", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			var claim object_store.KubeObject
+			var vm object_store.KubeObject
+
+			By("Checking existing VM, IPAddressClaim is not static, should be kept")
+			claim = f.KubernetesResource("IPAddressClaim", "ns1", "ip-10-10-10-0")
+			Expect(claim).To(Not(BeEmpty()))
+			Expect(claim.Field(`spec.static`).Bool()).To(BeFalse())
+			Expect(claim.Field(`spec.vmName`).String()).To(Equal("existing-vm"))
+
+			By("Checking VM which was removed, should remove IPAddressClaim as well")
+			claim = f.KubernetesResource("IPAddressClaim", "ns1", "ip-10-10-10-1")
+			Expect(claim).To(BeEmpty())
+
+			By("Checking VM which was removed, but IPAddressClaim is static, should be kept")
+			claim = f.KubernetesResource("IPAddressClaim", "ns1", "ip-10-10-10-2")
+			Expect(claim).To(Not(BeEmpty()))
+			Expect(claim.Field(`spec.static`).Bool()).To(BeTrue())
+			Expect(claim.Field(`spec.vmName`).String()).To(BeEmpty())
+
+			By("Checking new VM with static IP address assigned, should allocate requested address")
+			claim = f.KubernetesResource("IPAddressClaim", "ns2", "ip-10-10-10-1")
+			Expect(claim).To(Not(BeEmpty()))
+			Expect(claim.Field(`spec.static`).Bool()).To(BeTrue())
+			Expect(claim.Field(`spec.vmName`).String()).To(Equal("vm1"))
+			vm = f.KubernetesResource("IPAddressClaim", "ns2", "ip-10-10-10-1")
+			Expect(vm).To(Not(BeEmpty()))
+			// TODO: Expect(vm.Field(`status.ipAddress`).String()).To(Equal("10.10.10.1"))
+
+			By("Checking new VM without static IP address assigned, should allocate a new one")
+			claim = f.KubernetesResource("IPAddressClaim", "ns2", "ip-10-10-10-3")
+			Expect(claim).To(Not(BeEmpty()))
+			Expect(claim.Field(`spec.static`).Bool()).To(BeFalse())
+			Expect(claim.Field(`spec.vmName`).String()).To(Equal("vm2"))
+			Expect(vm).To(Not(BeEmpty()))
+			// TODO: Expect(vm.Field(`status.ipAddress`).String()).To(Equal("10.10.10.3"))
+
+			By("Checking new VM without static IP address assigned, should allocate a new one")
+			claim = f.KubernetesResource("IPAddressClaim", "ns2", "ip-10-10-10-4")
+			Expect(claim).To(Not(BeEmpty()))
+			Expect(claim.Field(`spec.static`).Bool()).To(BeFalse())
+			Expect(claim.Field(`spec.vmName`).String()).To(Equal("vm3"))
+			Expect(vm).To(Not(BeEmpty()))
+			// TODO: Expect(vm.Field(`status.ipAddress`).String()).To(Equal("10.10.10.3"))
+		})
+	})
+
 })

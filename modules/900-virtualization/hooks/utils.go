@@ -25,20 +25,23 @@ func nameToIP(name string) string {
 
 func ipToName(ip string) string {
 	addr := net.ParseIP(ip)
+	if addr.To4() != nil {
+		// IPv4 address
+		return "ip-" + strings.Replace(addr.String(), ".", "-", -1)
+	}
 	if addr.To16() != nil {
 		// IPv6 address
 		dst := make([]byte, hex.EncodedLen(len(addr)))
 		_ = hex.Encode(dst, addr)
-		return fmt.Sprintf(
-			string(dst[0:4]) + ":" +
-				string(dst[4:8]) + ":" +
-				string(dst[8:12]) + ":" +
-				string(dst[12:16]) + ":" +
-				string(dst[16:20]) + ":" +
-				string(dst[20:24]) + ":" +
-				string(dst[24:28]) + ":" +
-				string(dst[28:]))
+		return fmt.Sprintf("ip-" +
+			string(dst[0:4]) + "-" +
+			string(dst[4:8]) + "-" +
+			string(dst[8:12]) + "-" +
+			string(dst[12:16]) + "-" +
+			string(dst[16:20]) + "-" +
+			string(dst[20:24]) + "-" +
+			string(dst[24:28]) + "-" +
+			string(dst[28:]))
 	}
-	// IPv4 address
-	return addr.String()
+	return ""
 }

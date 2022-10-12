@@ -41,7 +41,7 @@ type VirtualMachineStatus struct {
 	// NodeName is the name where the VirtualMachineInstance is currently running.
 	NodeName string `json:"nodeName,omitempty"`
 	// IP address of Virtual Machine
-	VMIP string `json:"vmIP,omitempty"`
+	IPAddress string `json:"ipAddress,omitempty"`
 }
 
 // Represents the source of a boot disk
