@@ -23,7 +23,7 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: virtualization :: hooks :: disks_handler ::", func() {
+var _ = Describe("Modules :: virtualization :: hooks :: disk_handler ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Disk", true)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "DiskType", true)
@@ -73,7 +73,7 @@ metadata:
 spec:
   source:
     name: centos-7
-    scope: global
+    scope: public
   type: linstor-slow
   size: 10Gi
 `),

@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	virtv1 "kubevirt.io/api/core/v1"
 )
@@ -60,7 +61,7 @@ type ImageSource struct {
 	// Type represents the type for newly created disk
 	Type string `json:"type,omitempty"`
 	// Type represents the size for newly created disk
-	Size string `json:"size"`
+	Size resource.Quantity `json:"size"`
 	// Name represents the name of the Image
 	Name string `json:"name"`
 	// Scope represents the source of Image
@@ -78,9 +79,9 @@ type ImageSource struct {
 type ImageSourceScope string
 
 const (
-	// ImageSourceScopeGlobal indicates that disk should be
-	// created from global image. This is the default mode.
-	ImageSourceScopeGlobal ImageSourceScope = "global"
+	// ImageSourceScopePublic indicates that disk should be
+	// created from public image. This is the default mode.
+	ImageSourceScopePublic ImageSourceScope = "public"
 
 	// ImageSourceScopePrivate indicates that disk should be
 	// created from private image from the same namespace.

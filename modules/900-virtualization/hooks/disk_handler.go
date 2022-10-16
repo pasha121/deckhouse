@@ -26,16 +26,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
 	"github.com/deckhouse/deckhouse/modules/900-virtualization/api/v1alpha1"
 )
 
 const (
-	diskTypesSnapshot          = "disktype"
-	disksSnapshot              = "disk"
-	publicImageSourcesSnapshot = "publicimagesource"
-	dataVolumeSnapshot         = "datavolume"
+	diskTypesSnapshot          = "diskHandlerDisktype"
+	disksSnapshot              = "diskHandlerDisk"
+	publicImageSourcesSnapshot = "diskHandlerPublicImageSource"
+	dataVolumeSnapshot         = "diskHandlerDataVolume"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -77,6 +79,7 @@ type DiskTypeSnapshot struct {
 type DiskSnapshot struct {
 	Name      string
 	Namespace string
+	UID       types.UID
 	Type      string
 	Size      resource.Quantity
 	Source    v1alpha1.ImageSourceRef
@@ -117,6 +120,7 @@ func applyDiskFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	return &DiskSnapshot{
 		Name:      disk.Name,
 		Namespace: disk.Namespace,
+		UID:       disk.UID,
 		Type:      disk.Spec.Type,
 		Size:      disk.Spec.Size,
 		Source:    disk.Spec.Source,
@@ -197,7 +201,7 @@ func handleDisks(input *go_hook.HookInput) error {
 		var imageSource cdiv1.DataVolumeSource
 		if disk.Source.Name != "" {
 			var imageSourceFound bool
-			if disk.Source.Scope == v1alpha1.ImageSourceScopeGlobal || disk.Source.Scope == "" {
+			if disk.Source.Scope == v1alpha1.ImageSourceScopePublic || disk.Source.Scope == "" {
 				for _, dRaw := range publicImageSourceSnap {
 					publicImageSource := dRaw.(*PublicImageSourceSnapshot)
 					if publicImageSource.Name == disk.Source.Name {
@@ -227,6 +231,14 @@ func handleDisks(input *go_hook.HookInput) error {
 			ObjectMeta: v1.ObjectMeta{
 				Name:      disk.Name,
 				Namespace: disk.Namespace,
+				OwnerReferences: []v1.OwnerReference{{
+					APIVersion:         gv,
+					BlockOwnerDeletion: pointer.Bool(true),
+					Controller:         pointer.Bool(true),
+					Kind:               "Disk",
+					Name:               disk.Name,
+					UID:                disk.UID,
+				}},
 			},
 			Spec: cdiv1.DataVolumeSpec{
 				Source: &imageSource,
@@ -242,7 +254,6 @@ func handleDisks(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		_ = dataVolume
 		input.PatchCollector.Create(dataVolume)
 	}
 
