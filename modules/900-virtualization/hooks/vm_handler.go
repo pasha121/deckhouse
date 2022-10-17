@@ -200,6 +200,78 @@ func handleVMs(input *go_hook.HookInput) error {
 					UID:                d8vm.UID,
 				}},
 			},
+			Spec: virtv1.VirtualMachineSpec{
+				Running: pointer.Bool(true),
+				Template: &virtv1.VirtualMachineInstanceTemplateSpec{
+					ObjectMeta: v1.ObjectMeta{
+						Annotations: map[string]string{
+							"cni.cilium.io/ipAddrs":  d8vm.Status.IPAddress,
+							"cni.cilium.io/macAddrs": "f6:e1:74:94:b8:1a",
+						},
+					},
+					Spec: virtv1.VirtualMachineInstanceSpec{
+						Domain: virtv1.DomainSpec{
+							Devices: virtv1.Devices{
+								Interfaces: []virtv1.Interface{{
+									Name:  "default",
+									Model: "virtio",
+									InterfaceBindingMethod: virtv1.InterfaceBindingMethod{
+										Macvtap: &virtv1.InterfaceMacvtap{},
+									},
+								}},
+								Disks: []virtv1.Disk{
+									{
+										Name: "boot",
+										DiskDevice: virtv1.DiskDevice{
+											Disk: &virtv1.DiskTarget{
+												Bus: "virtio",
+											},
+										},
+									},
+									{
+										Name: "cloudinit",
+										DiskDevice: virtv1.DiskDevice{
+											Disk: &virtv1.DiskTarget{
+												Bus: "virtio",
+											},
+										},
+									},
+									// TODO: extra disks
+								},
+							},
+							Resources: virtv1.ResourceRequirements{
+								Requests: d8vm.Spec.Resources,
+							},
+						},
+						Networks: []virtv1.Network{{
+							Name: "default",
+							NetworkSource: virtv1.NetworkSource{
+								Pod: &virtv1.PodNetwork{},
+							}}},
+						Volumes: []virtv1.Volume{
+							{
+								Name: "boot",
+								VolumeSource: virtv1.VolumeSource{
+									DataVolume: &virtv1.DataVolumeSource{
+										Name:         bootDiskName,
+										Hotpluggable: false,
+									},
+								},
+							},
+							{
+								Name: "cloudinit",
+								VolumeSource: virtv1.VolumeSource{
+									CloudInitNoCloud: &virtv1.CloudInitNoCloudSource{
+										// TODO ssh public key
+										UserData: d8vm.Spec.CloudInit.UserData,
+									},
+								},
+							},
+							// TODO extra volumes
+						},
+					},
+				},
+			},
 		}
 
 		input.PatchCollector.Create(kvvm)
