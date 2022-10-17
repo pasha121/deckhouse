@@ -158,7 +158,7 @@ func handleVMs(input *go_hook.HookInput) error {
 							APIVersion: gv,
 						},
 						ObjectMeta: v1.ObjectMeta{
-							Name:      d8vm.Name,
+							Name:      bootDiskName,
 							Namespace: d8vm.Namespace,
 							OwnerReferences: []v1.OwnerReference{{
 								APIVersion:         gv,

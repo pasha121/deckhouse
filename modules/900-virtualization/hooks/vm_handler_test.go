@@ -88,7 +88,7 @@ spec:
 
 		It("Creates VirtualMachine and boot Disk", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			disk := f.KubernetesResource("Disk", "ns1", "mydata")
+			disk := f.KubernetesResource("Disk", "default", "vm1-boot")
 			Expect(disk).To(Not(BeEmpty()))
 			vm := f.KubernetesResource("virtualmachines.kubevirt.io", "default", "vm1")
 			Expect(vm).To(Not(BeEmpty()))
