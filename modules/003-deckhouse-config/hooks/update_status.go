@@ -162,7 +162,7 @@ func (sp statusPatch) MarshalJSON() ([]byte, error) {
 
 // snapshotToModuleConfigList returns a typed array of ModuleConfig items from untyped items in the snapshot.
 func snapshotToModuleConfigList(snapshot []go_hook.FilterResult) []*d8config_v1.ModuleConfig {
-	configs := make([]*d8config_v1.ModuleConfig, 0)
+	configs := make([]*d8config_v1.ModuleConfig, 0, len(snapshot))
 	for _, item := range snapshot {
 		cfg := item.(*d8config_v1.ModuleConfig)
 		configs = append(configs, cfg)
