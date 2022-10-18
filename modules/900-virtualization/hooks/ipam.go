@@ -197,11 +197,32 @@ CLAIM_LOOP:
 	// Handle VMs
 	for _, sRaw := range vmSnap {
 		vm := sRaw.(*VirtualMachineSnapshot)
+		var newLease bool
+		var ip string
 
-		ip := vm.StaticIPAddress
-		leaseFound := false
-		if ip == "" {
-			ip, leaseFound = allocateIPForVM(&parsedCIDRs, allocatedIPs, vm.Namespace+"/"+vm.Name)
+		// Handle case when VM requested static IP
+		if vm.StaticIPAddress != "" {
+			ip = vm.StaticIPAddress
+			vmString := vm.Namespace + "/" + vm.Name
+			v, found := allocatedIPs[ip]
+			if v != "" && v != vmString {
+				// Static Claim is found, but it is in use by other VM
+				input.LogEntry.Warnf("VM %s/%s requested IP %s, but it is already allocated for %s", vm.Namespace, vm.Name, ip, vmString)
+				continue
+			}
+			if v == "" && found {
+				// Static Claim is found, needs to update vmName
+				patch := map[string]interface{}{"spec": map[string]interface{}{"vmName": vm.Name, "static": true}}
+				input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", vm.Namespace, ipToName(ip))
+				allocatedIPs[ip] = vmString
+			}
+			if v == "" && !found {
+				newLease = true
+			}
+		}
+
+		if vm.StaticIPAddress == "" {
+			ip, newLease = findIPForVM(&parsedCIDRs, allocatedIPs, vm.Namespace+"/"+vm.Name)
 			if ip == "" {
 				input.LogEntry.Errorf("Error allocating new IP Address for VM %s/%s", vm.Namespace, vm.Name)
 				continue
@@ -209,24 +230,12 @@ CLAIM_LOOP:
 		}
 
 		if vm.StatusIPAddress != ip {
-			//patch := map[string]interface{}{"status": map[string]string{"ipAddress": ip}}
 			patch := map[string]interface{}{"status": map[string]interface{}{"ipAddress": ip}}
 			input.PatchCollector.MergePatch(patch, gv, "VirtualMachine", vm.Namespace, vm.Name, object_patch.WithSubresource("/status"))
 		}
 
-		// Handle case when VM requested static IP
-		if leaseFound {
-			vmString := allocatedIPs[ip]
-			if vmString == "" {
-				// Static Claim is found, needs to update vmName
-				patch := map[string]interface{}{"spec": map[string]string{"vmName": ""}}
-				input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", vm.Namespace, ipToName(ip))
-				allocatedIPs[ip] = vm.Namespace + "/" + vm.Name
-			} else if vmString != vm.Namespace+"/"+vm.Name {
-				// Static Claim is found, but it is in use by other VM
-				input.LogEntry.Warnf("VM %s/%s requested IP %s, but it is already allocated for %s", vm.Namespace, vm.Name, ip, vmString)
-				continue
-			}
+		// Claim already created
+		if !newLease {
 			continue
 		}
 
@@ -256,10 +265,10 @@ CLAIM_LOOP:
 	return nil
 }
 
-func allocateIPForVM(parsedCIDRs *[]*net.IPNet, allocatedIPs map[string]string, vmString string) (string, bool) {
+func findIPForVM(parsedCIDRs *[]*net.IPNet, allocatedIPs map[string]string, vmString string) (string, bool) {
 	for k, v := range allocatedIPs {
 		if v == vmString {
-			return k, true
+			return k, false
 		}
 	}
 
@@ -267,7 +276,7 @@ func allocateIPForVM(parsedCIDRs *[]*net.IPNet, allocatedIPs map[string]string, 
 		ip := cidr.IP
 		for ip := ip.Mask(cidr.Mask); cidr.Contains(ip); inc(ip) {
 			if _, ok := allocatedIPs[ip.String()]; !ok {
-				return ip.String(), false
+				return ip.String(), true
 			}
 		}
 	}
