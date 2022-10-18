@@ -251,8 +251,8 @@ github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwo
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.9.0 h1:8xPHl4/q1VyqGIPif1F+1V3Y3lSmrq01EabUW3CoW5s=
 github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
-github.com/flant/addon-operator v1.0.7-0.20221013173033-c54d38dd63e8 h1:rg4GjHDuUiUq0CekizmNsjKqQIMALfzx2pmrIRybn4s=
-github.com/flant/addon-operator v1.0.7-0.20221013173033-c54d38dd63e8/go.mod h1:29Ofuj7VjHuveVVO24nVyv7gP2ZmmISZihzQoVWOT2Y=
+github.com/flant/addon-operator v1.0.7-0.20221002140803-148d708a9a64 h1:oCvoMNMCim5qIC+D/UyBxaPx5yS/doof/bDR86CxdSs=
+github.com/flant/addon-operator v1.0.7-0.20221002140803-148d708a9a64/go.mod h1:nUO6ZIS4m7vInowI8NtjuvD9a5WMjVq/+qB9LQ9tWr4=
 github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbLR5vJOUzKAK8p3nrD7mDk=
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v0.0.6 h1:cHFMf7xGtJOgg+KBuPcA+7q+M7IJRSgf2pHVStv2aj0=
@@ -261,7 +261,7 @@ github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a h1:PlStPekqPtTSWD
 github.com/flant/libjq-go v1.6.2-0.20200616114952-907039e8a02a/go.mod h1:+SYqi5wsNjtQVlkPg0Ep5IOuN+ydg79Jo/gk4/PuS8c=
 github.com/flant/logboek v0.3.4 h1://0FHwS7hoLHTz7H+JlLheKlu298edC+qV61ca9OJBQ=
 github.com/flant/logboek v0.3.4/go.mod h1:/vKAVARjAIs2OlxxDRn7SvltNVcWMb1Ifo23kCDJZco=
-github.com/flant/shell-operator v1.0.11/go.mod h1:jX93Qs9VqikWb6PCj0mZHS++DeLx4I3yfuTr5KzvBso=
+github.com/flant/shell-operator v1.0.12/go.mod h1:jX93Qs9VqikWb6PCj0mZHS++DeLx4I3yfuTr5KzvBso=
 github.com/flant/shell-operator v1.0.13-0.20221018121846-032ccd06522c h1:6nc/DYDzA74Xcc0qctoJbuEJ+1e3uNgEOqH2Dp/ynus=
 github.com/flant/shell-operator v1.0.13-0.20221018121846-032ccd06522c/go.mod h1:jX93Qs9VqikWb6PCj0mZHS++DeLx4I3yfuTr5KzvBso=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
