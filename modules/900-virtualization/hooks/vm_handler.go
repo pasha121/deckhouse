@@ -123,6 +123,17 @@ VM_LOOP:
 				continue
 			}
 			// KubeVirt VirtualMachine found
+			apply := func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+				var vm *virtv1.VirtualMachine
+				err := sdk.FromUnstructured(u, vm)
+				if err != nil {
+					return nil, err
+				}
+				setVMFields(d8vm, vm)
+				return sdk.ToUnstructured(&vm)
+			}
+			input.PatchCollector.Filter(apply, "kubevirt.io/v1", "VirtualMachine", d8vm.Namespace, d8vm.Name)
+
 			continue VM_LOOP
 		}
 
@@ -184,99 +195,98 @@ VM_LOOP:
 			}
 		}
 
-		kvvm := &virtv1.VirtualMachine{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "VirtualMachine",
-				APIVersion: "kubevirt.io/v1",
-			},
-			ObjectMeta: v1.ObjectMeta{
-				Name:      d8vm.Name,
-				Namespace: d8vm.Namespace,
-				OwnerReferences: []v1.OwnerReference{{
-					APIVersion:         gv,
-					BlockOwnerDeletion: pointer.Bool(true),
-					Controller:         pointer.Bool(true),
-					Kind:               "VirtualMachine",
-					Name:               d8vm.Name,
-					UID:                d8vm.UID,
-				}},
-			},
-			Spec: virtv1.VirtualMachineSpec{
-				Running: pointer.Bool(true),
-				Template: &virtv1.VirtualMachineInstanceTemplateSpec{
-					ObjectMeta: v1.ObjectMeta{
-						Annotations: map[string]string{
-							"cni.cilium.io/ipAddrs":  d8vm.Status.IPAddress,
-							"cni.cilium.io/macAddrs": "f6:e1:74:94:b8:1a",
-						},
-					},
-					Spec: virtv1.VirtualMachineInstanceSpec{
-						Domain: virtv1.DomainSpec{
-							Devices: virtv1.Devices{
-								Interfaces: []virtv1.Interface{{
-									Name:  "default",
-									Model: "virtio",
-									InterfaceBindingMethod: virtv1.InterfaceBindingMethod{
-										Macvtap: &virtv1.InterfaceMacvtap{},
-									},
-								}},
-								Disks: []virtv1.Disk{
-									{
-										Name: "boot",
-										DiskDevice: virtv1.DiskDevice{
-											Disk: &virtv1.DiskTarget{
-												Bus: "virtio",
-											},
-										},
-									},
-									{
-										Name: "cloudinit",
-										DiskDevice: virtv1.DiskDevice{
-											Disk: &virtv1.DiskTarget{
-												Bus: "virtio",
-											},
-										},
-									},
-									// TODO: extra disks
-								},
-							},
-							Resources: virtv1.ResourceRequirements{
-								Requests: d8vm.Spec.Resources,
-							},
-						},
-						Networks: []virtv1.Network{{
-							Name: "default",
-							NetworkSource: virtv1.NetworkSource{
-								Pod: &virtv1.PodNetwork{},
-							}}},
-						Volumes: []virtv1.Volume{
-							{
-								Name: "boot",
-								VolumeSource: virtv1.VolumeSource{
-									DataVolume: &virtv1.DataVolumeSource{
-										Name:         bootDiskName,
-										Hotpluggable: false,
-									},
-								},
-							},
-							{
-								Name: "cloudinit",
-								VolumeSource: virtv1.VolumeSource{
-									CloudInitNoCloud: &virtv1.CloudInitNoCloudSource{
-										// TODO ssh public key
-										UserData: d8vm.Spec.CloudInit.UserData,
-									},
-								},
-							},
-							// TODO extra volumes
-						},
-					},
-				},
-			},
-		}
-
+		kvvm := &virtv1.VirtualMachine{}
+		setVMFields(d8vm, kvvm)
 		input.PatchCollector.Create(kvvm)
+
 	}
 
 	return nil
+}
+
+func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
+	vm.TypeMeta = metav1.TypeMeta{
+		Kind:       "VirtualMachine",
+		APIVersion: "kubevirt.io/v1",
+	}
+	vm.SetName(d8vm.Name)
+	vm.SetNamespace(d8vm.Namespace)
+	vm.SetOwnerReferences([]v1.OwnerReference{{
+		APIVersion:         gv,
+		BlockOwnerDeletion: pointer.Bool(true),
+		Controller:         pointer.Bool(true),
+		Kind:               "VirtualMachine",
+		Name:               d8vm.Name,
+		UID:                d8vm.UID,
+	}})
+	vm.Spec.Running = pointer.Bool(true)
+	vm.Spec.Template = &virtv1.VirtualMachineInstanceTemplateSpec{
+		ObjectMeta: v1.ObjectMeta{
+			Annotations: map[string]string{
+				"cni.cilium.io/ipAddrs":  d8vm.Status.IPAddress,
+				"cni.cilium.io/macAddrs": "f6:e1:74:94:b8:1a",
+			},
+		},
+		Spec: virtv1.VirtualMachineInstanceSpec{
+			Domain: virtv1.DomainSpec{
+				Devices: virtv1.Devices{
+					Interfaces: []virtv1.Interface{{
+						Name:  "default",
+						Model: "virtio",
+						InterfaceBindingMethod: virtv1.InterfaceBindingMethod{
+							Macvtap: &virtv1.InterfaceMacvtap{},
+						},
+					}},
+					Disks: []virtv1.Disk{
+						{
+							Name: "boot",
+							DiskDevice: virtv1.DiskDevice{
+								Disk: &virtv1.DiskTarget{
+									Bus: "virtio",
+								},
+							},
+						},
+						{
+							Name: "cloudinit",
+							DiskDevice: virtv1.DiskDevice{
+								Disk: &virtv1.DiskTarget{
+									Bus: "virtio",
+								},
+							},
+						},
+						// TODO: extra disks
+					},
+				},
+				Resources: virtv1.ResourceRequirements{
+					Requests: d8vm.Spec.Resources,
+				},
+			},
+			Networks: []virtv1.Network{{
+				Name: "default",
+				NetworkSource: virtv1.NetworkSource{
+					Pod: &virtv1.PodNetwork{},
+				}}},
+			Volumes: []virtv1.Volume{
+				{
+					Name: "boot",
+					VolumeSource: virtv1.VolumeSource{
+						DataVolume: &virtv1.DataVolumeSource{
+							Name:         vm.Name + "-boot",
+							Hotpluggable: false,
+						},
+					},
+				},
+				{
+					Name: "cloudinit",
+					VolumeSource: virtv1.VolumeSource{
+						CloudInitNoCloud: &virtv1.CloudInitNoCloudSource{
+							// TODO ssh public key
+							UserData: d8vm.Spec.CloudInit.UserData,
+						},
+					},
+				},
+				// TODO extra volumes
+			},
+		},
+	}
 }
