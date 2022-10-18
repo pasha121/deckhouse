@@ -6,104 +6,18 @@ properties:
     type: object
     default: {}
     properties:
-      zzzzz:
-        type: object
-        properties: &zz
-          qwe:
-            type: number
-      azazaGroup:
-        type: object
-        properties:
-          <<: *zz
-#      masterNodeGroup:
-#        properties:
-#          replicas:
-#            description: |
-#              The number of master nodes to create.
-#            type: integer
-#            minimum: 1
-#          instanceClass:
-#            type: object
-#            additionalProperties: false
-#            required: [cores, memory, imageID]
-#            properties: &instanceClassProperties
-#              platform:
-#                description: |
-#                  The type of virtual machine to create.
-#                type: string
-#                default: standard-v2
-#              cores:
-#                description: |
-#                  Amount of CPU cores to provision on a Yandex Compute Instance.
-#                type: integer
-#              memory:
-#                type: integer
-#                description: |
-#                  Amount of primary memory in MB provision on a Yandex Compute Instance.
-#                example: 8192
-#              imageID:
-#                type: string
-#                description: |
-#                  Image ID to use while provisioning Yandex Compute Instances.
-#                example: fd8nb7ecsbvj76dfaa8b
-#              diskSizeGB:
-#                type: integer
-#                description: |
-#                  Yandex Compute Instance disk size in gigabytes.
-#                example: 20
-#                x-doc-default: 50
-#      nodeGroups:
-#        type: array
-#        description: |
-#          An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
-#        items:
-#          type: object
-#          required: [name, replicas, instanceClass]
-#          properties:
-#            name:
-#              description: |
-#                The name of the NodeGroup to use for generating node names.
-#              type: string
-#            replicas:
-#              description: |
-#                The number of nodes to create.
-#              type: integer
-#            zones:
-#              type: array
-#              description: |
-#                A limited set of zones in which nodes can be created.
-#              items:
-#                enum:
-#                  - ru-central1-a
-#                  - ru-central1-b
-#                  - ru-central1-c
-#              uniqueItems: true
-#            instanceClass:
-#              required: [cores, memory, imageID]
-#              type: object
-#              description: |
-#                Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/en/documentation/v1/modules/030-cloud-provider-yandex/cr.html#yandexinstanceclass).
-#              properties: *instanceClassProperties
-#                <<: *instanceClassProperties
-#                coreFraction:
-#                  description: |
-#                    Percent of reserved CPU capacity on a Yandex Compute Instance. [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
-#                  type: integer
-#                  example: 20
-#                  x-doc-default: 100
-#                  enum: [ 0,5,20,50,100 ]
-#      defaultStorageClass:
-#        type: string
-#        x-examples:
-#        - test
-#      storageClasses:
-#        type: array
-#        additionalProperties:
-#          type: string
-#        x-examples:
-#        - [{"name": "test", "type": "test"}]
+      defaultStorageClass:
+        type: string
+        x-examples:
+        - test
+      storageClasses:
+        type: array
+        additionalProperties:
+          type: string
+        x-examples:
+        - [{"name": "test", "type": "test"}]
       providerClusterConfiguration:
         $ref: '/deckhouse/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
-#      providerDiscoveryData:
-#        $ref: '/deckhouse/candi/cloud-providers/yandex/openapi/cloud_discovery_data.yaml#/apiVersions/0/openAPISpec'
+      providerDiscoveryData:
+        $ref: '/deckhouse/candi/cloud-providers/yandex/openapi/cloud_discovery_data.yaml#/apiVersions/0/openAPISpec'
 
