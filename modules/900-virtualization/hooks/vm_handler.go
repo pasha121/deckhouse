@@ -107,6 +107,7 @@ func handleVMs(input *go_hook.HookInput) error {
 		return nil
 	}
 
+VM_LOOP:
 	for _, sRaw := range deckhouseVMSnap {
 		d8vm := sRaw.(*v1alpha1.VirtualMachine)
 		if d8vm.Status.IPAddress == "" {
@@ -114,7 +115,7 @@ func handleVMs(input *go_hook.HookInput) error {
 			continue
 		}
 		for _, dRaw := range kubevirtVMSnap {
-			kvvm := dRaw.(*virtv1.KubeVirt)
+			kvvm := dRaw.(*virtv1.VirtualMachine)
 			if d8vm.Namespace != kvvm.Namespace {
 				continue
 			}
@@ -122,7 +123,7 @@ func handleVMs(input *go_hook.HookInput) error {
 				continue
 			}
 			// KubeVirt VirtualMachine found
-			continue
+			continue VM_LOOP
 		}
 
 		// KubeVirt VirtualMachine not found, needs to create a new one
