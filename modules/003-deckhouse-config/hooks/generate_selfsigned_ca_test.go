@@ -43,7 +43,7 @@ const (
 	initConfigValuesString = `{}`
 )
 
-var _ = FDescribe("DeckhouseConfig hooks :: generate self-signed CA :: ", func() {
+var _ = Describe("DeckhouseConfig hooks :: generate self-signed CA :: ", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 
 	Context("giving no Secret", func() {
