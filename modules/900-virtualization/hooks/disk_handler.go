@@ -169,6 +169,7 @@ func handleDisks(input *go_hook.HookInput) error {
 		return nil
 	}
 
+DISK_LOOP:
 	for _, sRaw := range diskSnap {
 		disk := sRaw.(*DiskSnapshot)
 		for _, dRaw := range dataVolumeSnap {
@@ -180,7 +181,7 @@ func handleDisks(input *go_hook.HookInput) error {
 				continue
 			}
 			// DataVolume found
-			continue
+			continue DISK_LOOP
 		}
 		// DataVolume not found, needs to create a new one
 

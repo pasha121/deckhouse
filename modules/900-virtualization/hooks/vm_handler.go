@@ -124,7 +124,7 @@ VM_LOOP:
 			}
 			// KubeVirt VirtualMachine found
 			apply := func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-				var vm *virtv1.VirtualMachine
+				vm := &virtv1.VirtualMachine{}
 				err := sdk.FromUnstructured(u, vm)
 				if err != nil {
 					return nil, err
