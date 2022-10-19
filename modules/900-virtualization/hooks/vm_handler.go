@@ -255,7 +255,6 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
 								},
 							},
 						},
-						// TODO: extra disks
 					},
 				},
 				Resources: virtv1.ResourceRequirements{

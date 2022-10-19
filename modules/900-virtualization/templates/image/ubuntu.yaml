@@ -1,0 +1,40 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PublicImageSource
+metadata:
+  name: ubuntu-16.04
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  registry:
+    url: docker://{{ include "helm_lib_module_image" (list . "imageUbuntuXenial") }}
+    pullMethod: node
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PublicImageSource
+metadata:
+  name: ubuntu-18.04
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  registry:
+    url: docker://{{ include "helm_lib_module_image" (list . "imageUbuntuBionic") }}
+    pullMethod: node
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PublicImageSource
+metadata:
+  name: ubuntu-20.04
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  registry:
+    url: docker://{{ include "helm_lib_module_image" (list . "imageUbuntuFocal") }}
+    pullMethod: node
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PublicImageSource
+metadata:
+  name: ubuntu-22.04
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  registry:
+    url: docker://{{ include "helm_lib_module_image" (list . "imageUbuntuJammy") }}
+    pullMethod: node
