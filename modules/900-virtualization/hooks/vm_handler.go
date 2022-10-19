@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -219,7 +220,7 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
 		Name:               d8vm.Name,
 		UID:                d8vm.UID,
 	}})
-	vm.Spec.Running = pointer.Bool(true)
+	vm.Spec.Running = d8vm.Spec.Running
 	vm.Spec.Template = &virtv1.VirtualMachineInstanceTemplateSpec{
 		ObjectMeta: v1.ObjectMeta{
 			Annotations: map[string]string{
@@ -285,8 +286,31 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
 						},
 					},
 				},
-				// TODO extra volumes
 			},
 		},
+	}
+
+	// attach extra disks
+	if d8vm.Spec.Disks != nil {
+		for i, disk := range *d8vm.Spec.Disks {
+			diskName := "disk-" + strconv.Itoa(i)
+			vm.Spec.Template.Spec.Domain.Devices.Disks = append(vm.Spec.Template.Spec.Domain.Devices.Disks, virtv1.Disk{
+				Name: diskName,
+				DiskDevice: virtv1.DiskDevice{
+					Disk: &virtv1.DiskTarget{
+						Bus: disk.Bus,
+					},
+				},
+			})
+			vm.Spec.Template.Spec.Volumes = append(vm.Spec.Template.Spec.Volumes, virtv1.Volume{
+				Name: diskName,
+				VolumeSource: virtv1.VolumeSource{
+					DataVolume: &virtv1.DataVolumeSource{
+						Name:         disk.Name,
+						Hotpluggable: disk.Hotpluggable,
+					},
+				},
+			})
+		}
 	}
 }
