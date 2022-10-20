@@ -7,9 +7,11 @@ Deckhouse consists of a Deckhouse operator and modules. A module is a bundle of 
 
 You can configure Deckhouse using the:
 - [Global settings](deckhouse-configure-global.html#parameters) are stored in the `ModuleConfig/global` resource.
-- Module settings are stored in ModuleConfig resources and some modules have additional custom resources.
+- Modules settings are stored in the `ModuleConfig` resources and some modules have additional custom resources.
 
-## Deckhouse configuration
+<div markdown="0" style="height: 0;" id="#deckhouse-configuration"></div>
+
+## Modules settings
 
 The Deckhouse configuration is stored in `ModuleConfig` resources and may contain the following parameters (keys):
 
@@ -127,23 +129,20 @@ user-authn          1         12h   Disabled by config
 
 Depending on the [bundle used](./modules/002-deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
-{%- assign bundles = site.data.bundles | sort %}
 <table>
 <thead>
 <tr><th>Bundle name</th><th>List of modules, enabled by default</th></tr></thead>
 <tbody>
-{% for bundle in bundles %}
+{% for bundle in site.data.bundles.bundleNames %}
 <tr>
-<td><strong>{{ bundle[0] |  replace_first: "values-", "" | capitalize }}</strong></td>
-<td>{% assign modules = bundle[1] | sort %}
+<td><strong>{{ bundle }}</strong></td>
+<td>
 <ul style="columns: 3">
-{%- for module in modules %}
-{%- assign moduleName = module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' %}
+{%- for moduleName in site.data.bundles.bundleModules[bundle] %}
 {%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
 {%- if isExcluded.size > 0 %}{% continue %}{% endif %}
-{%- if module[1] != true %}{% continue %}{% endif %}
 <li>
-{{ module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' }}</li>
+{{ moduleName }}</li>
 {%- endfor %}
 </ul>
 </td>

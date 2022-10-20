@@ -7,19 +7,19 @@ lang: ru
 Deckhouse состоит из оператора Deckhouse и модулей. Модуль это набор из Helm-чарта, хуков Addon-operator'а, других файлов и правил сборки компонентов модуля (компонентов Deckhouse).
 
 Поведение Deckhouse настраивается с помощью:
-- [Глобальных настроек](deckhouse-configure-global.html#параметры), хранящихся в ресурсе `ModuleConfig/global`.
-- Настроек модулей, хранящихся в ресурсах `ModuleConfig` и, для некоторых модулей, в дополнительных custom resource'ах.
+- [Глобальных настроек](deckhouse-configure-global.html#параметры), хранящихся в custom resource `ModuleConfig` с именем `global`.
+- [Настроек модулей](#настройки-модулей), хранящихся в custom resource'ах `ModuleConfig` и, для некоторых модулей, в дополнительных custom resource'ах.
 
-## Конфигурация Deckhouse
+<div markdown="0" style="height: 0;" id="конфигурация-deckhouse"></div>
 
-Конфигурация Deckhouse хранится в ресурсах `ModuleConfig` и может содержать следующие параметры (ключи):
+## Настройки модулей
 
-- `metadata.name` — имя ресурса совпадает с именем модуля Deckhouse в виде kebab-case.
-- `spec.version` — версия настроек модуля. Номер актуальной версии можно увидеть в документации настроек модуля.
-- `spec.settings` — настройки модуля.
-- `spec.enabled` — флаг для явного [включения или отключения модуля](#включение-и-отключение-модуля).
+Настройки модулей хранятся в custom resource'ах `ModuleConfig`, имеющих следующие параметры (ключи):
 
-В ресурсе `ModuleConfig/global` хранятся глобальные настройки и поле enabled здесь игнорируется.
+- `metadata.name` — имя custom resource'а. Должно совпадать с именем модуля Deckhouse в kebab-case (например — `prometheus`, `node-manager`).
+- `spec.version` — версия настроек модуля. Номер актуальной версии можно увидеть в документации по модулю в разделе _"Настройки"_. 
+- `spec.settings` — объект, содержащий настройки модуля. Описание возможных настроек можно найти в документации по модулю в разделе _"Настройки"_.
+- `spec.enabled` — параметр для явного [включения или отключения модуля](#включение-и-отключение-модуля). 
 
 Пример ресурсов ModuleConfig:
 
@@ -134,23 +134,20 @@ user-authn          1         12h   Disabled by config
 
 В зависимости от используемого [набора модулей](./modules/002-deckhouse/configuration.html#parameters-bundle) (bundle) модули могут быть включены или выключены по умолчанию.
 
-{%- assign bundles = site.data.bundles | sort %}
 <table>
 <thead>
 <tr><th>Набор модулей (bundle)</th><th>Список включенных по умолчанию модулей</th></tr></thead>
 <tbody>
-{% for bundle in bundles %}
+{% for bundle in site.data.bundles.bundleNames %}
 <tr>
-<td><strong>{{ bundle[0] |  replace_first: "values-", "" | capitalize }}</strong></td>
-<td>{% assign modules = bundle[1] | sort %}
+<td><strong>{{ bundle }}</strong></td>
+<td>
 <ul style="columns: 3">
-{%- for module in modules %}
-{%- assign moduleName = module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' %}
+{%- for moduleName in site.data.bundles.bundleModules[bundle] %}
 {%- assign isExcluded = site.data.exclude.module_names | where: "name", moduleName %}
 {%- if isExcluded.size > 0 %}{% continue %}{% endif %}
-{%- if module[1] != true %}{% continue %}{% endif %}
 <li>
-{{ module[0] | regex_replace: "Enabled$", '' | camel_to_snake_case | replace: "_", '-' }}</li>
+{{ moduleName }}</li>
 {%- endfor %}
 </ul>
 </td>
