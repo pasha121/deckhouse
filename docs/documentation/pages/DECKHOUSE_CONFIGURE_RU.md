@@ -17,9 +17,9 @@ Deckhouse состоит из оператора Deckhouse и модулей. М
 Настройки модулей хранятся в custom resource'ах `ModuleConfig`, имеющих следующие параметры (ключи):
 
 - `metadata.name` — имя custom resource'а. Должно совпадать с именем модуля Deckhouse в kebab-case (например — `prometheus`, `node-manager`).
-- `spec.version` — версия настроек модуля. Номер актуальной версии можно увидеть в документации по модулю в разделе _"Настройки"_. 
+- `spec.version` — версия настроек модуля. Номер актуальной версии можно увидеть в документации по модулю в разделе _"Настройки"_.
 - `spec.settings` — объект, содержащий настройки модуля. Описание возможных настроек можно найти в документации по модулю в разделе _"Настройки"_.
-- `spec.enabled` — параметр для явного [включения или отключения модуля](#включение-и-отключение-модуля). 
+- `spec.enabled` — параметр для явного [включения или отключения модуля](#включение-и-отключение-модуля).
 
 Пример ресурсов ModuleConfig:
 
@@ -79,7 +79,7 @@ kubectl -n d8-system edit moduleconfig/upmeter
 
 ### Настройка модуля
 
-> При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/VALUES.md). Будем признательны, если поставите проекту *звезду*.
+> При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/VALUES.md). Будем признательны, если поставите проекту _звезду_.
 
 Deckhouse работает только с включёнными модулями. В зависимости от используемого [набора модулей](#наборы-модулей) модули могут быть включены или выключены по умолчанию. Читайте подробнее про явное [включение или отключение модуля](#включение-и-отключение-модуля).
 
@@ -172,7 +172,7 @@ user-authn          1         12h   Disabled by config
 ### Особенности автоматики, зависящие от типа модуля
 
 {% raw %}
-* Модули *monitoring* (`operator-prometheus`, `prometheus` и `vertical-pod-autoscaler`):
+* Модули _monitoring_ (`operator-prometheus`, `prometheus` и `vertical-pod-autoscaler`):
   * Порядок поиска узлов (для определения `nodeSelector`):
     * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
     * Наличие узла с лейблом `node-role.deckhouse.io/monitoring`.
@@ -183,7 +183,7 @@ user-authn          1         12h   Disabled by config
       Например: `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"operator-prometheus"}`;
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"monitoring"}`;
     * `{"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}`;
-* Модули *frontend* (исключительно модуль `ingress-nginx`):
+* Модули _frontend_ (исключительно модуль `ingress-nginx`):
   * Порядок поиска узлов (для определения `nodeSelector`):
     * Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
     * Наличие узла с лейблом `node-role.deckhouse.io/frontend`.
