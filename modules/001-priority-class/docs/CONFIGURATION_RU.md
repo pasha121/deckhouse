@@ -2,12 +2,10 @@
 title: "Модуль priority-class: настройки"
 ---
 
-По умолчанию — **включен**.
+{% include module-bundle.liquid %}
 
-В спецификации Pod'а необходимо установить
-соответствующий [priorityClassName](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#pod-priority)
-.
-Очень важно правильно выставлять `priorityClassName`. Если есть сомнения - спросите коллег.
+В спецификации Pod'а необходимо установить соответствующий [priorityClassName](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#pod-priority).
+Очень важно правильно выставлять `priorityClassName`.
 
 > Любой установленный `priorityClassName` не уменьшит приоритета Pod'а, т.к. если `priority-class` у Pod'а не
 > установлен, планировщик считает его самым низким — `develop`.

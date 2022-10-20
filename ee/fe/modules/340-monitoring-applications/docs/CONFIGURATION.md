@@ -2,6 +2,8 @@
 title: "The monitoring-applications module: configuration"
 ---
 
+{% include module-bundle.liquid %}
+
 ## Parameters
 
 * `enabledApplications` — a list of applications to explicitly include in monitoring regardless of the results of the auto-discovery;

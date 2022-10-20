@@ -2,12 +2,10 @@
 title: "The priority-class module: configuration"
 ---
 
-This module is enabled by **default**.
+{% include module-bundle.liquid %}
 
-The Pod specification must contain the
-appropriate [priorityClassName](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#pod-priority)
-.
-It is essential to set the `priorityClassName` correctly. If in doubt, get your colleagues to help you.
+The Pod specification must contain the appropriate [priorityClassName](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#pod-priority).
+It is essential to set the `priorityClassName` correctly.
 
 > Any `priorityClassName` set to a Pod cannot lower its priority because the scheduler considers Pods without
 > the `priority-class` as having the lowest (`develop`) priority.
