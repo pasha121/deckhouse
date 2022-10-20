@@ -22,6 +22,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -220,6 +221,20 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
 		Name:               d8vm.Name,
 		UID:                d8vm.UID,
 	}})
+
+	cloudInit := make(map[string]interface{})
+	if d8vm.Spec.CloudInit != nil {
+		// TODO: handle errors
+		yaml.Unmarshal([]byte(d8vm.Spec.CloudInit.UserData), &cloudInit)
+	}
+	if d8vm.Spec.SSHPublicKey != "" {
+		cloudInit["ssh_authorized_keys"] = []string{d8vm.Spec.SSHPublicKey}
+	}
+	if d8vm.Spec.UserName != "" {
+		cloudInit["user"] = d8vm.Spec.UserName
+	}
+	cloudInitRaw, _ := yaml.Marshal(cloudInit)
+
 	vm.Spec.Running = d8vm.Spec.Running
 	vm.Spec.Template = &virtv1.VirtualMachineInstanceTemplateSpec{
 		ObjectMeta: v1.ObjectMeta{
@@ -280,8 +295,8 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
 					Name: "cloudinit",
 					VolumeSource: virtv1.VolumeSource{
 						CloudInitNoCloud: &virtv1.CloudInitNoCloudSource{
-							// TODO ssh public key
-							UserData: d8vm.Spec.CloudInit.UserData,
+							// TODO handle cloudinit from secret
+							UserData: fmt.Sprintf("#cloud-config\n%s", cloudInitRaw),
 						},
 					},
 				},
@@ -292,7 +307,7 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
 	// attach extra disks
 	if d8vm.Spec.Disks != nil {
 		for i, disk := range *d8vm.Spec.Disks {
-			diskName := "disk-" + strconv.Itoa(i)
+			diskName := "disk-" + strconv.Itoa(i+1)
 			vm.Spec.Template.Spec.Domain.Devices.Disks = append(vm.Spec.Template.Spec.Domain.Devices.Disks, virtv1.Disk{
 				Name: diskName,
 				DiskDevice: virtv1.DiskDevice{
