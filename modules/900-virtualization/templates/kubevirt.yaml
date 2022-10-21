@@ -12,7 +12,7 @@ spec:
       featureGates:
       - LiveMigration
       - Macvtap
-      - HostDisk
+      - HotplugVolumes
       - GPU
       - NetworkAwareLiveMigration
   customizeComponents:
