@@ -398,6 +398,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Docker/1.20"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -495,6 +496,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -826,6 +828,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Docker/1.21"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -923,6 +926,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -1254,6 +1258,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Docker/1.22"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -1351,6 +1356,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -1682,6 +1688,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Docker/1.23"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -1779,6 +1786,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -2110,6 +2118,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Docker/1.24"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -2207,6 +2216,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Docker
@@ -2538,6 +2548,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Containerd/1.20"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -2635,6 +2646,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -2966,6 +2978,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Containerd/1.21"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -3063,6 +3076,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -3394,6 +3408,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Containerd/1.22"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -3491,6 +3506,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -3822,6 +3838,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Containerd/1.23"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -3919,6 +3936,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -4250,6 +4268,7 @@ jobs:
 
       - name: "Run e2e test: AWS/Containerd/1.24"
         id: e2e_test_run
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
@@ -4347,6 +4366,7 @@ jobs:
       - name: Cleanup bootstrapped cluster
         if: ${{ success() }}
         id: cleanup_cluster
+        timeout-minutes: 60
         env:
           PROVIDER: AWS
           CRI: Containerd
