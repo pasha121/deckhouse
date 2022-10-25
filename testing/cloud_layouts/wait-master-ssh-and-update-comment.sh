@@ -152,6 +152,8 @@ fi
 connection_str="${master_user}@${master_ip}"
 echo -n "$connection_str" > "$connection_str_out_file"
 
+echo "Connection str $connection_str has been written to file $connection_str_out_file"
+
 # get body
 sleep_second=0
 for (( i=1; i<=5; i++ )); do
