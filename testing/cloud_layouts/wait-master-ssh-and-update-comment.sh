@@ -61,8 +61,6 @@ function get_comment(){
     return 1
   fi
 
-  echo -n "$connection_str" > "$connection_str_out_file"
-
   result_body="$bbody"
   echo "Result body: $result_body"
 }
@@ -150,6 +148,9 @@ if [[ "$master_ip" == "" || "$master_user" == "" ]]; then
   echo "Timeout waiting master ip and master user"
   exit 1
 fi
+
+connection_str="${master_user}@${master_ip}"
+echo -n "$connection_str" > "$connection_str_out_file"
 
 # get body
 sleep_second=0
