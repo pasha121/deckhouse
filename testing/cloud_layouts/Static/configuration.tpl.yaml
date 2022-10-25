@@ -17,6 +17,7 @@ deckhouse:
   configOverrides:
     cniFlannelEnabled: true
     flantIntegrationEnabled: false
+    istioEnabled: true
     linstorEnabled: true
     global:
       modules:
