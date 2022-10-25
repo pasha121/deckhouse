@@ -105,7 +105,7 @@ spec:
         env:
         {{- include "kubevirt_images" . | nindent 8 }}
         - name: KUBEVIRT_VERSION
-          value: {{ include "kubevirt_images" . | sha256sum | trunc 7 }}
+          value: {{ include "kubevirt_images" . | sha256sum | trunc 7 | quote }}
         - name: WATCH_NAMESPACE
           value: d8-virtualization
         image: {{ include "helm_lib_module_image" (list . "virtOperator") }}
