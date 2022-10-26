@@ -106,6 +106,6 @@ func (c *IPAMValidatorController) deleteFunc(obj interface{}) {
 		c.Logger.Errorf("failed to release %s, wrong name", claim.GetName())
 		return
 	}
-	c.IPStore.Del(claim.GetName())
+	c.IPStore.Del(ip)
 	c.Logger.Infof("released %s", claim.GetName())
 }

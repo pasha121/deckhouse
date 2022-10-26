@@ -27,7 +27,7 @@ func ipToName(ip string) string {
 	addr := net.ParseIP(ip)
 	if addr.To4() != nil {
 		// IPv4 address
-		return "ip-" + strings.Replace(addr.String(), ".", "-", -1)
+		return "ip-" + strings.ReplaceAll(addr.String(), ".", "-")
 	}
 	if addr.To16() != nil {
 		// IPv6 address

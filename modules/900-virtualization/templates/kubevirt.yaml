@@ -10,11 +10,9 @@ spec:
   configuration:
     developerConfiguration:
       featureGates:
-      - LiveMigration
       - Macvtap
       - HotplugVolumes
       - GPU
-      - NetworkAwareLiveMigration
   customizeComponents:
     patches:
     - resourceType: Deployment

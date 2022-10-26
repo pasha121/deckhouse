@@ -148,7 +148,7 @@ VM_LOOP:
 
 		if d8vm.Spec.BootDisk.Image != (v1alpha1.ImageSource{}) {
 			if bootDiskName != "" {
-				input.LogEntry.Errorln("Disk source can't be specifed with image source for bootDisk")
+				input.LogEntry.Errorln("Disk source can't be specified with image source for bootDisk")
 				continue
 			}
 			bootDiskName = d8vm.Name + "-boot"
@@ -224,8 +224,11 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
 
 	cloudInit := make(map[string]interface{})
 	if d8vm.Spec.CloudInit != nil {
-		// TODO: handle errors
-		yaml.Unmarshal([]byte(d8vm.Spec.CloudInit.UserData), &cloudInit)
+		err := yaml.Unmarshal([]byte(d8vm.Spec.CloudInit.UserData), &cloudInit)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse cloudInit config for VirtualMachine: %v", err)
+		}
+
 	}
 	if d8vm.Spec.SSHPublicKey != "" {
 		cloudInit["ssh_authorized_keys"] = []string{d8vm.Spec.SSHPublicKey}
