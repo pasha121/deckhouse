@@ -1,4 +1,4 @@
-ARG BASE_UBUNTU_FOCAL
+ARG BASE_UBUNTU
 ARG BASE_RUST
 
 FROM $BASE_RUST as build
@@ -23,7 +23,7 @@ RUN cargo build \
     --features "api,api-client,enrichment-tables,sources-host_metrics,sources-internal_metrics,sources-file,sources-kubernetes_logs,transforms,sinks-prometheus,sinks-blackhole,sinks-elasticsearch,sinks-file,sinks-loki,sinks-socket,sinks-console,sinks-vector,unix,rdkafka?/gssapi-vendored,vrl-cli" \
     && strip target/release/vector
 
-FROM $BASE_UBUNTU_FOCAL
+FROM $BASE_UBUNTU
 RUN mkdir -p /etc/vector \
     && apt-get update \
     && apt-get install -yq ca-certificates tzdata inotify-tools gettext procps \
