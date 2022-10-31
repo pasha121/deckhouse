@@ -131,7 +131,10 @@ VM_LOOP:
 				if err != nil {
 					return nil, err
 				}
-				setVMFields(d8vm, vm)
+				err = setVMFields(d8vm, vm)
+				if err != nil {
+					return nil, err
+				}
 				return sdk.ToUnstructured(&vm)
 			}
 			input.PatchCollector.Filter(apply, "kubevirt.io/v1", "VirtualMachine", d8vm.Namespace, d8vm.Name)
@@ -198,15 +201,17 @@ VM_LOOP:
 		}
 
 		kvvm := &virtv1.VirtualMachine{}
-		setVMFields(d8vm, kvvm)
+		err := setVMFields(d8vm, kvvm)
+		if err != nil {
+			return err
+		}
 		input.PatchCollector.Create(kvvm)
-
 	}
 
 	return nil
 }
 
-func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
+func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) error {
 	vm.TypeMeta = metav1.TypeMeta{
 		Kind:       "VirtualMachine",
 		APIVersion: "kubevirt.io/v1",
@@ -225,10 +230,7 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
 	cloudInit := make(map[string]interface{})
 	if d8vm.Spec.CloudInit != nil {
 		err := yaml.Unmarshal([]byte(d8vm.Spec.CloudInit.UserData), &cloudInit)
-		if err != nil {
-			return nil, fmt.Errorf("cannot parse cloudInit config for VirtualMachine: %v", err)
-		}
-
+		return fmt.Errorf("cannot parse cloudInit config for VirtualMachine: %v", err)
 	}
 	if d8vm.Spec.SSHPublicKey != "" {
 		cloudInit["ssh_authorized_keys"] = []string{d8vm.Spec.SSHPublicKey}
@@ -330,4 +332,5 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) {
 			})
 		}
 	}
+	return nil
 }

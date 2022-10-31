@@ -1,0 +1,125 @@
+diff --git a/pkg/client/linstor.go b/pkg/client/linstor.go
+index 42b3490..341e9de 100644
+--- a/pkg/client/linstor.go
++++ b/pkg/client/linstor.go
+@@ -447,7 +447,7 @@ func (s *Linstor) GetLegacyVolumeParameters(ctx context.Context, volId string) (
+ }
+ 
+ // Attach idempotently creates a resource on the given node.
+-func (s *Linstor) Attach(ctx context.Context, volId, node string, readOnly, volQuorum bool) error {
++func (s *Linstor) Attach(ctx context.Context, volId, node string, readOnly, rwxBlock, volQuorum bool) error {
+ 	s.log.WithFields(logrus.Fields{
+ 		"volume":     volId,
+ 		"targetNode": node,
+@@ -461,19 +461,36 @@ func (s *Linstor) Attach(ctx context.Context, volId, node string, readOnly, volQ
+ 	var existingRes *lapi.Resource
+ 
+ 	existingSharedName := ""
++	resInUse := 0
+ 
+ 	for i := range ress {
+ 		if ress[i].NodeName == node {
+ 			existingRes = &ress[i].Resource
+ 			existingSharedName = ress[i].SharedName
+-			break
+ 		}
++		if *ress[i].State.InUse {
++			resInUse++
++		}
++	}
++
++	if resInUse >= 2 {
++		return fmt.Errorf("two other resources already InUse")
+ 	}
+ 
+ 	propsModify := lapi.GenericPropsModify{OverrideProps: map[string]string{
+ 		linstor.PublishedReadOnlyKey: strconv.FormatBool(readOnly),
+ 	}}
+ 
++	if resInUse == 1 && rwxBlock {
++		rdPropsModify := lapi.VolumeDefinitionModify{GenericPropsModify: lapi.GenericPropsModify{OverrideProps: map[string]string{
++			"DrbdOptions/Net/allow-two-primaries": "yes",
++		}}}
++		err = s.client.ResourceDefinitions.ModifyVolumeDefinition(ctx, volId, 0, rdPropsModify)
++		if err != nil {
++			return err
++		}
++	}
++
+ 	// If the resource is already on the node, don't worry about attaching.
+ 	if existingRes == nil {
+ 		// In certain circumstances it is necessary to create a diskfull resource to make it usable.
+@@ -636,6 +653,31 @@ func (s *Linstor) Detach(ctx context.Context, volId, node string) error {
+ 		"targetNode": node,
+ 	})
+ 
++	ress, err := s.client.Resources.GetResourceView(ctx, &lapi.ListOpts{Resource: []string{volId}})
++	if nil404(err) != nil {
++		return err
++	}
++
++	resInUse := 0
++	for i := range ress {
++		if *ress[i].State.InUse {
++			resInUse++
++		}
++	}
++
++	if resInUse >= 2 {
++		return fmt.Errorf("two or more resources are InUse")
++	}
++
++	rdPropsModify := lapi.VolumeDefinitionModify{GenericPropsModify: lapi.GenericPropsModify{DeleteProps: []string{
++		"DrbdOptions/Net/allow-two-primaries",
++	}}}
++
++	err = s.client.ResourceDefinitions.ModifyVolumeDefinition(ctx, volId, 0, rdPropsModify)
++	if err != nil {
++		return err
++	}
++
+ 	vols, err := s.client.Resources.GetVolumes(ctx, volId, node)
+ 	if err != nil {
+ 		return nil404(err)
+diff --git a/pkg/client/mock.go b/pkg/client/mock.go
+index 6305ef2..494c6cf 100644
+--- a/pkg/client/mock.go
++++ b/pkg/client/mock.go
+@@ -194,7 +194,7 @@ func (s *MockStorage) VolFromVol(ctx context.Context, sourceVol, vol *volume.Inf
+ 	return nil
+ }
+ 
+-func (s *MockStorage) Attach(ctx context.Context, volId, node string, readOnly, useQuorum bool) error {
++func (s *MockStorage) Attach(ctx context.Context, volId, node string, readOnly, rwxBlock, useQuorum bool) error {
+ 	s.assignedVolumes[volId] = append(s.assignedVolumes[volId], volume.Assignment{Node: node, Path: "/dev/" + volId, ReadOnly: &readOnly})
+ 	return nil
+ }
+diff --git a/pkg/driver/driver.go b/pkg/driver/driver.go
+index d3d2d75..77723fc 100644
+--- a/pkg/driver/driver.go
++++ b/pkg/driver/driver.go
+@@ -650,7 +650,10 @@ func (d Driver) ControllerPublishVolume(ctx context.Context, req *csi.Controller
+ 			"ControllerPublishVolume failed for %s on node %s: %v", req.GetVolumeId(), req.GetNodeId(), err)
+ 	}
+ 
+-	err = d.Assignments.Attach(ctx, req.GetVolumeId(), req.GetNodeId(), req.GetReadonly(), existingVolume.UseQuorum)
++	// ReadWriteMany block volume
++	rwxBlock := req.VolumeCapability.AccessMode.GetMode() == csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER && req.VolumeCapability.GetBlock() != nil
++
++	err = d.Assignments.Attach(ctx, req.GetVolumeId(), req.GetNodeId(), req.GetReadonly(), rwxBlock, existingVolume.UseQuorum)
+ 	if err != nil {
+ 		return nil, status.Errorf(codes.Internal,
+ 			"ControllerPublishVolume failed for %s: %v", req.GetVolumeId(), err)
+diff --git a/pkg/volume/volume.go b/pkg/volume/volume.go
+index 61e78fd..84fae4f 100644
+--- a/pkg/volume/volume.go
++++ b/pkg/volume/volume.go
+@@ -83,7 +83,7 @@ type SnapshotCreateDeleter interface {
+ // AttacherDettacher handles operations relating to volume accessiblity on nodes.
+ type AttacherDettacher interface {
+ 	Querier
+-	Attach(ctx context.Context, volId, node string, readOnly, useQuorum bool) error
++	Attach(ctx context.Context, volId, node string, readOnly, rwxBlock, useQuorum bool) error
+ 	Detach(ctx context.Context, volId, node string) error
+ 	NodeAvailable(ctx context.Context, node string) error
+ 	FindAssignmentOnNode(ctx context.Context, volId, node string) (*Assignment, error)
