@@ -35,14 +35,17 @@ spec:
                 imageRepo:
                   type: string
                   description: Image repository name.
+                  minLength: 1
                 apiUrl:
                   type: string
+                  minLength: 5
                   description: |
                     URL of the registry API. It is automatically derived from `imageRepo` if not specified.
                     E.g. if `imageRepo=cr.example.com/myproject`, then `apiUrl` it is derived as
                     `https://cr.example.com/`.
                 pullSecretName:
                   type: string
+                  minLength: 1
                   description: |
                     Name of the secret of type `kubernetes.io/dockerconfigjson` with credentials for the registry.
                     The secret must be in namespace `d8-delivery`.
@@ -63,6 +66,7 @@ spec:
                     project:
                       type: string
                       default: "default"
+                      minLength: 1
                       description: |
                         Name of the Argo CD project to which the repository will be added.
                         If not specified, then the repository will be added to the default project.
