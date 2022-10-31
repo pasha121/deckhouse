@@ -117,9 +117,13 @@ func restorePasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error
 	if !ok {
 		return "", fmt.Errorf("secret/%s has empty data", secretName)
 	}
+
 	// Only one field is expected.
-	if len(secretData) != 1 {
-		return "", fmt.Errorf("secret/%s has many fields", secretName)
+	if len(secretData) == 0 {
+		return "", fmt.Errorf("secret/%s has no fields", secretName)
+	}
+	if len(secretData) > 1 {
+		return "", fmt.Errorf("secret/%s has multiple fields", secretName)
 	}
 
 	// Expect htpasswd field is present.
@@ -141,7 +145,7 @@ func restorePasswordFromSnapshot(snapshot []go_hook.FilterResult) (string, error
 
 	// Extract password.
 	cleaned := strings.TrimSpace(htpasswd)
-	pass := strings.TrimPrefix(cleaned, defaultUserName+":{PLAIN}")
+	pass := strings.TrimPrefix(cleaned, userPrefix)
 
 	return pass, nil
 }
