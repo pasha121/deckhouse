@@ -23,21 +23,25 @@ import (
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	k8syaml "sigs.k8s.io/yaml"
+	yamlSrlzr "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"sigs.k8s.io/yaml"
 	// . "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: delivery :: hooks :: werf_sources ::", func() {
 
-	decUnstructured := yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	decUnstructured := yamlSrlzr.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	Context("parsing of WerfSources resource into inner formet", func() {
 		table.DescribeTable("Parsing werf_sources", func(wsyaml string, expected werfSource) {
+			// Setup
 			obj := &unstructured.Unstructured{}
 			_, _, err := decUnstructured.Decode([]byte(wsyaml), nil, obj)
 			Expect(err).ToNot(HaveOccurred())
 
+			// Action
 			ws, err := filterWerfSource(obj)
+
+			// Assert
 			Expect(err).ToNot(HaveOccurred())
 			Expect(ws).To(Equal(expected))
 		},
@@ -98,7 +102,7 @@ spec:
 					apiUrl: "https://cr.example.com",
 				}),
 
-			table.Entry("argocdRepoEnabled=false yet with repo options specified omits	 the repo config for Argo", `
+			table.Entry("argocdRepoEnabled=false omits the repo config for Argo even when repo options are specified ", `
 apiVersion: deckhouse.io/v1alpha1
 kind: WerfSource
 metadata:
@@ -247,7 +251,7 @@ spec:
 
 	Context("YAML rendering of Argo CD repo", func() {
 		It("renders full struct", func() {
-			b, err := k8syaml.Marshal(argocdHelmOCIRepository{
+			b, err := yaml.Marshal(argocdHelmOCIRepository{
 				Name:     "ws1",
 				URL:      "cr-1.example.com/the/path",
 				Username: "n-1",
@@ -267,7 +271,7 @@ username: n-1
 
 		})
 		It("omits optional fields", func() {
-			b, err := k8syaml.Marshal(argocdHelmOCIRepository{
+			b, err := yaml.Marshal(argocdHelmOCIRepository{
 				Name:     "ws1",
 				URL:      "cr-1.example.com/the/path",
 				Username: "",
@@ -288,7 +292,7 @@ url: cr-1.example.com/the/path
 
 	Context("YAML rendering of Argo CD Image Updater registry", func() {
 		It("renders full struct", func() {
-			b, err := k8syaml.Marshal(imageUpdaterRegistry{
+			b, err := yaml.Marshal(imageUpdaterRegistry{
 				Name:        "ws1",
 				Prefix:      "cr-1.example.com",
 				ApiUrl:      "https://cr.example.com",
@@ -307,7 +311,7 @@ prefix: cr-1.example.com
 		})
 
 		It("omits optional fields", func() {
-			b, err := k8syaml.Marshal(imageUpdaterRegistry{
+			b, err := yaml.Marshal(imageUpdaterRegistry{
 				Name:    "ws1",
 				Prefix:  "cr-1.example.com",
 				ApiUrl:  "https://cr.example.com",
