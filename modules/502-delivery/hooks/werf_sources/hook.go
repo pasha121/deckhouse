@@ -68,7 +68,8 @@ type imageUpdaterRegistry struct {
 	Prefix      string `json:"prefix"`
 	ApiUrl      string `json:"api_url"`
 	Credentials string `json:"credentials,omitempty"`
-	Default     bool   `json:"default"`
+	Default     bool   `json:"default"` // TODO (shvgn) accept this flag from the CRD
+
 	// TODO (shvgn) consider 'insecure' and 'ping' fields
 }
 
@@ -85,6 +86,7 @@ type argocdHelmOCIRepository struct {
 
 	// actually, a container repo in the form "cr.example.com/path/to(/image)"
 	URL string `json:"url"`
+
 	// TODO (shvgn) consider 'tlsClientCertData' and 'tlsClientCertKey' fields
 }
 
@@ -174,11 +176,16 @@ func convImageUpdaterRegistries(werfSources []werfSource) ([]imageUpdaterRegistr
 			url = "https://" + firstSegment(ws.repo)
 		}
 
+		var pullCreds string
+		if ws.pullSecretName != "" {
+			pullCreds = "pullsecret:d8-delivery/" + ws.pullSecretName
+		}
+
 		registries = append(registries, imageUpdaterRegistry{
 			Name:        ws.name,
 			Prefix:      firstSegment(ws.repo),
 			ApiUrl:      url,
-			Credentials: "pullsecret:d8-delivery/" + ws.pullSecretName,
+			Credentials: pullCreds,
 			Default:     false,
 		})
 	}
@@ -188,6 +195,9 @@ func convImageUpdaterRegistries(werfSources []werfSource) ([]imageUpdaterRegistr
 func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]registryCredentials) ([]argocdHelmOCIRepository, error) {
 	var argoRepos []argocdHelmOCIRepository
 	for _, ws := range werfSources {
+		if ws.argocdRepo == nil {
+			continue
+		}
 		username, password := "", ""
 		creds, ok := credentialsBySecretName[ws.pullSecretName]
 		if ok {
@@ -215,7 +225,6 @@ func firstSegment(s string) string {
 	return s
 }
 
-// TODO tests
 func filterWerfSource(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var (
 		ws  werfSource
