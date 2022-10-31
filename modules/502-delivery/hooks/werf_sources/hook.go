@@ -131,6 +131,8 @@ func applyWerfSources(input *go_hook.HookInput, dc dependency.Container) error {
 	}
 
 	input.Values.Set("delivery.internal.argocd.repositories", argoRepos)
+	// Save hash of the image updater config and inject it into the pod template, since the
+	// updater does not subscribe to its configmap by itself.
 	input.Values.Set("delivery.internal.argocdImageUpdater.registries", imageUpdaterRegistries)
 
 	// TODO (shvgn) tests
