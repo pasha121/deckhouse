@@ -315,14 +315,24 @@ type credSecretMapperImpl struct {
 
 func (m *credSecretMapperImpl) Get(ctx context.Context) (map[string][]byte, error) {
 	secretList, err := m.client.CoreV1().Secrets(namespace).
-		List(context.Background(), metav1.ListOptions{FieldSelector: "type=kubernetes.io/dockerconfigjson"})
+		List(context.Background(),
+			// metav1.ListOptions{FieldSelector: "type=kubernetes.io/dockerconfigjson"},
+			metav1.ListOptions{},
+		)
 	if err != nil {
 		return nil, fmt.Errorf("cannot list secrets: %v", err)
 	}
 
 	dataByName := make(map[string][]byte)
 	for _, secret := range secretList.Items {
-		name, data := secret.GetName(), secret.Data[corev1.DockerConfigJsonKey]
+		if secret.Type != "kubernetes.io/dockerconfigjson" {
+			continue
+		}
+		name := secret.GetName()
+		data, ok := secret.Data[corev1.DockerConfigJsonKey]
+		if !ok {
+			return nil, fmt.Errorf("secret %q does not contain %q key", name, corev1.DockerConfigJsonKey)
+		}
 		dataByName[name] = data
 	}
 
@@ -344,7 +354,7 @@ func fetchRegistryCredentials(getter credSecretMapper, werfSources []werfSource)
 
 		dockerConfigJson, ok := dataByName[ws.pullSecretName]
 		if !ok {
-			return nil, fmt.Errorf("secret %q does not contain %q key", ws.pullSecretName, corev1.DockerConfigJsonKey)
+			return nil, fmt.Errorf("secret %q is not found", ws.pullSecretName)
 		}
 
 		registry := firstSegment(ws.repo)

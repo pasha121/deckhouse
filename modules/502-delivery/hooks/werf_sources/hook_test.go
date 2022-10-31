@@ -19,13 +19,14 @@ package hooks
 import (
 	"context"
 
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	yamlSrlzr "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"sigs.k8s.io/yaml"
-	// . "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: delivery :: hooks :: werf_sources ::", func() {
@@ -326,6 +327,73 @@ prefix: cr-1.example.com
 			Expect(err).ToNot(HaveOccurred())
 			Expect("\n" + string(b)).To(Equal(expected))
 		})
+	})
+
+	FContext("Hook flow", func() {
+
+		f := HookExecutionConfigInit(`{}`, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "WerfSource", false)
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: WerfSource
+metadata:
+  name: ws1
+spec:
+  imageRepo: cr-1.example.com/the/path
+  apiUrl: https://cr.example.com
+  pullSecretName: registry-credentials-1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: WerfSource
+metadata:
+  name: ws3-no-creds
+spec:
+  imageRepo: open.example.com/the/path
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-credentials-1
+  namespace: d8-delivery
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJjci0xLmV4YW1wbGUuY29tIjp7InVzZXJuYW1lIjoibi0xIiwicGFzc3dvcmQiOiJwd2QtMSIsImF1dGgiOiJ0ZXN0LWF1dGgifX19
+# {"auths":{"cr-1.example.com":{"username":"n-1","password":"pwd-1","auth":"test-auth"}}}
+`))
+			f.RunHook()
+		})
+
+		It("Runs successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+
+		It("creates repo secrets for ArgoCD", func() {
+			repo1, err := f.KubeClient().CoreV1().Secrets("d8-delivery").Get(context.Background(), "repo-ws1", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(repo1.Data["username"]).To(Equal([]byte("n-1")))
+
+		})
+
+		It("creates configmap for Argo CD image updater", func() {
+			cm, err := f.KubeClient().CoreV1().ConfigMaps("d8-delivery").Get(context.Background(), "argocd-image-updater-config", metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect("\n" + cm.Data["registries.yaml"]).To(Equal(`
+registries:
+- api_url: https://cr.example.com
+  credentials: pullsecret:d8-delivery/registry-credentials-1
+  default: false
+  name: ws1
+  prefix: cr-1.example.com
+- api_url: https://cr.example.com
+  default: false
+  name: ws3-no-creds
+  prefix: open.example.com
+`))
+		})
+
 	})
 
 })
