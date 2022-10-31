@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	k8syaml "sigs.k8s.io/yaml"
 	// . "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -244,34 +245,81 @@ spec:
 
 	})
 
-	// 	// TODO: test the mapping the values to resources
-	// 	const initValues = `
-	// 		{ "delivery": { "internal": {
-	// 			"argocd":             { "repositories": [] },
-	// 			"argocdImageUpdater": { "registries":   [] }
-	// 		} } }`
+	FContext("YAML rendering of Argo CD repo", func() {
+		It("renders full struct", func() {
+			b, err := k8syaml.Marshal(argocdHelmOCIRepository{
+				Name:     "ws1",
+				URL:      "cr-1.example.com/the/path",
+				Username: "n-1",
+				Password: "pwd-1",
+				Project:  "default",
+			})
 
-	// 	Context("no werf sources ", func() {
-	// 		f := HookExecutionConfigInit(initValues, `{}`)
+			expected := `name: ws1
+password: pwd-1
+project: default
+url: cr-1.example.com/the/path
+username: n-1
+`
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(b)).To(Equal(expected))
+			Expect(string(b)).To(Equal(expected))
 
-	// 		It("disables synthetic group when true", func() {
-	// 			f.RunHook()
-	// 			Expect(f).To(ExecuteSuccessfully())
+		})
+		It("omits optional fields", func() {
+			b, err := k8syaml.Marshal(argocdHelmOCIRepository{
+				Name:     "ws1",
+				URL:      "cr-1.example.com/the/path",
+				Username: "",
+				Password: "",
+				Project:  "default",
+			})
 
-	// 			value := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-	// 			Expect(value).To(ContainElement("synthetic/"))
-	// 		})
+			expected := `name: ws1
+project: default
+url: cr-1.example.com/the/path
+`
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(b)).To(Equal(expected))
 
-	// 		It("enables synthetic group when false", func() {
-	// 			f.ValuesSetFromYaml("upmeter.smokeMiniDisabled", []byte("false"))
+		})
+	})
 
-	// 			f.RunHook()
-	// 			Expect(f).To(ExecuteSuccessfully())
+	FContext("YAML rendering of Argo CD Image Updater registry", func() {
+		It("renders full struct", func() {
+			b, err := k8syaml.Marshal(imageUpdaterRegistry{
+				Name:        "ws1",
+				Prefix:      "cr-1.example.com",
+				ApiUrl:      "https://cr.example.com",
+				Credentials: "pullsecret:d8-delivery/registry-credentials-1",
+				Default:     false,
+			})
+			expected := `api_url: https://cr.example.com
+credentials: pullsecret:d8-delivery/registry-credentials-1
+default: false
+name: ws1
+prefix: cr-1.example.com
+`
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(b)).To(Equal(expected))
+		})
 
-	// 			value := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
-	// 			Expect(value).NotTo(ContainElement("synthetic/"))
-	// 		})
-	// 	})
+		It("omits optional fields", func() {
+			b, err := k8syaml.Marshal(imageUpdaterRegistry{
+				Name:    "ws1",
+				Prefix:  "cr-1.example.com",
+				ApiUrl:  "https://cr.example.com",
+				Default: false,
+			})
+			expected := `api_url: https://cr.example.com
+default: false
+name: ws1
+prefix: cr-1.example.com
+`
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(b)).To(Equal(expected))
+		})
+	})
 
 })
 
