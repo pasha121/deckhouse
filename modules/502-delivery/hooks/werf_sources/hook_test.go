@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 
+	. "github.com/deckhouse/deckhouse/testing/helm"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -329,13 +330,24 @@ prefix: cr-1.example.com
 		})
 	})
 
-	FContext("Hook flow", func() {
+	XContext("Hook flow", func() {
 
 		f := HookExecutionConfigInit(`{}`, `{}`)
 		f.RegisterCRD("deckhouse.io", "v1alpha1", "WerfSource", false)
 
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
+		// Docker config JSON for cr-1.example.com
+		// {"auths":{"cr-1.example.com":{"username":"n-1","password":"pwd-1","auth":"test-auth"}}}
+		// ↓↓↓
+		state := `
+---
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJjci0xLmV4YW1wbGUuY29tIjp7InVzZXJuYW1lIjoibi0xIiwicGFzc3dvcmQiOiJwd2QtMSIsImF1dGgiOiJ0ZXN0LWF1dGgifX19
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-credentials-1
+  namespace: d8-delivery
+type: kubernetes.io/dockerconfigjson
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: WerfSource
@@ -352,17 +364,10 @@ metadata:
   name: ws3-no-creds
 spec:
   imageRepo: open.example.com/the/path
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: registry-credentials-1
-  namespace: d8-delivery
-type: kubernetes.io/dockerconfigjson
-data:
-  .dockerconfigjson: eyJhdXRocyI6eyJjci0xLmV4YW1wbGUuY29tIjp7InVzZXJuYW1lIjoibi0xIiwicGFzc3dvcmQiOiJwd2QtMSIsImF1dGgiOiJ0ZXN0LWF1dGgifX19
-# {"auths":{"cr-1.example.com":{"username":"n-1","password":"pwd-1","auth":"test-auth"}}}
-`))
+`
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(state))
 			f.RunHook()
 		})
 
@@ -396,6 +401,174 @@ registries:
 
 	})
 
+	FContext("templates", func() {
+
+		Context("Repo and registry configuratoin", func() {
+			f := SetupHelmConfig(``)
+
+			values := internalValues{
+				ArgoCD: internalArgoCDValues{
+					Repositories: []argocdHelmOCIRepository{
+						{
+							Name:     "ws1",
+							URL:      "cr-1.example.com/the/path",
+							Username: "n-1",
+							Password: "pwd-1",
+							Project:  "default",
+						},
+						{
+							Name:    "ws3-no-creds",
+							URL:     "open.example.com/the/path",
+							Project: "default",
+						},
+					},
+				},
+				ArgoCDImageUpdater: internalUpdaterValues{
+					Registries: []imageUpdaterRegistry{
+						{
+							Name:        "ws1",
+							Prefix:      "cr-1.example.com",
+							ApiUrl:      "https://cr.example.com",
+							Credentials: "pullsecret:d8-delivery/registry-credentials-1",
+							Default:     false,
+						},
+						{
+							Name:    "ws3-no-creds",
+							Prefix:  "open.example.com",
+							ApiUrl:  "https://open.example.com",
+							Default: false,
+						},
+					},
+				},
+			}
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("delivery", moduleValues)
+				f.ValuesSet("delivery.internal", values)
+				f.HelmRender()
+			})
+
+			It("rendered without an error", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+			})
+
+			It("creates repo secrets for ArgoCD", func() {
+				repo1 := f.KubernetesResource("Secret", "d8-delivery", "repo-ws1")
+				Expect(repo1.Exists()).To(BeTrue())
+				Expect(repo1.Field("stringData").String()).Should(MatchYAML(`{
+					"type": "helm",
+					"enableOCI": "true",
+					"name": "ws1",
+					"username": "n-1",
+					"password": "pwd-1",
+					"project": "default",
+					"url": "cr-1.example.com/the/path"
+				}`))
+
+				repo3 := f.KubernetesResource("Secret", "d8-delivery", "repo-ws3-no-creds")
+				Expect(repo3.Exists()).To(BeTrue())
+				Expect(repo3.Field("stringData").String()).Should(MatchYAML(`{
+					"type": "helm",
+					"enableOCI": "true",
+					"name": "ws3-no-creds",
+					"project": "default",
+					"url": "open.example.com/the/path"
+				}`))
+
+			})
+
+			// 			It("creates configmap for Argo CD image updater", func() {
+			// 				cm, err := f.KubeClient().CoreV1().ConfigMaps("d8-delivery").Get(context.Background(), "argocd-image-updater-config", metav1.GetOptions{})
+			// 				Expect(err).ToNot(HaveOccurred())
+			// 				Expect("\n" + cm.Data["registries.yaml"]).To(Equal(`
+			// registries:
+			// - api_url: https://cr.example.com
+			//   credentials: pullsecret:d8-delivery/registry-credentials-1
+			//   default: false
+			//   name: ws1
+			//   prefix: cr-1.example.com
+			// - api_url: https://cr.example.com
+			//   default: false
+			//   name: ws3-no-creds
+			//   prefix: open.example.com
+			// `))
+			// 			})
+		})
+
+		XContext("The mapping of values to cluster state", func() {
+
+			values := internalValues{
+				ArgoCD: internalArgoCDValues{
+					Repositories: []argocdHelmOCIRepository{
+						{
+							Name:     "ws1",
+							URL:      "cr-1.example.com/the/path",
+							Username: "n-1",
+							Password: "pwd-1",
+							Project:  "default",
+						},
+						{
+							Name:    "ws3-no-creds",
+							URL:     "open.example.com/the/path",
+							Project: "default",
+						},
+					},
+				},
+				ArgoCDImageUpdater: internalUpdaterValues{
+					Registries: []imageUpdaterRegistry{
+						{
+							Name:        "ws1",
+							Prefix:      "cr-1.example.com",
+							ApiUrl:      "https://cr.example.com",
+							Credentials: "pullsecret:d8-delivery/registry-credentials-1",
+							Default:     false,
+						},
+						{
+							Name:    "ws3-no-creds",
+							Prefix:  "open.example.com",
+							ApiUrl:  "https://open.example.com",
+							Default: false,
+						},
+					},
+				},
+			}
+
+			f := HookExecutionConfigInit(`{}`, `{}`)
+
+			BeforeEach(func() {
+				f.ValuesSet("delivery.internal", values)
+				f.RunHook()
+			})
+
+			It("creates repo secrets for ArgoCD", func() {
+				repo1, err := f.KubeClient().CoreV1().Secrets("d8-delivery").Get(context.Background(), "repo-ws1", metav1.GetOptions{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(repo1.Data["username"]).To(Equal([]byte("n-1")))
+
+			})
+
+			It("creates configmap for Argo CD image updater", func() {
+				cm, err := f.KubeClient().CoreV1().ConfigMaps("d8-delivery").Get(context.Background(), "argocd-image-updater-config", metav1.GetOptions{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect("\n" + cm.Data["registries.yaml"]).To(Equal(`
+registries:
+- api_url: https://cr.example.com
+  credentials: pullsecret:d8-delivery/registry-credentials-1
+  default: false
+  name: ws1
+  prefix: cr-1.example.com
+- api_url: https://cr.example.com
+  default: false
+  name: ws3-no-creds
+  prefix: open.example.com
+`))
+			})
+
+		})
+
+	})
 })
 
 type mockCredGetter map[string][]byte
@@ -403,3 +576,44 @@ type mockCredGetter map[string][]byte
 func (cg mockCredGetter) Get(context.Context) (map[string][]byte, error) {
 	return cg, nil
 }
+
+const globalValues = `
+clusterConfiguration:
+  apiVersion: deckhouse.io/v1
+  cloud:
+    prefix: myprefix
+    provider: OpenStack
+  clusterDomain: cluster.local
+  clusterType: "Cloud"
+  defaultCRI: Docker
+  kind: ClusterConfiguration
+  kubernetesVersion: "1.21"
+  podSubnetCIDR: 10.111.0.0/16
+  podSubnetNodeCIDRPrefix: "24"
+  serviceSubnetCIDR: 10.222.0.0/16
+enabledModules: ["vertical-pod-autoscaler-crd", "upmeter"]
+modules:
+  https:
+    mode: CustomCertificate
+  publicDomainTemplate: "%s.example.com"
+  placement: {}
+discovery:
+  d8SpecificNodeCountByRole:
+    system: 1
+    master: 1
+  kubernetesVersion: 1.24.2
+`
+
+const moduleValues = `
+auth: {}
+argocd:
+  admin:
+    enabled: false
+https:
+  mode: CustomCertificate
+internal:
+  argocd:
+    repositories: []
+  argocdImageUpdater:
+    registries: []
+`

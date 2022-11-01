@@ -102,7 +102,7 @@ spec:
             capabilities:
               drop:
                 - all
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 999
+      # securityContext:
+      #   runAsNonRoot: true
+      #   runAsUser: 999
       serviceAccountName: argocd-redis

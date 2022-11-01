@@ -90,8 +90,8 @@ spec:
             - mountPath: /app/config/reposerver/tls
               name: argocd-repo-server-tls
           workingDir: /app
-      securityContext:
-        runAsNonRoot: true
+      # securityContext:
+      #   runAsNonRoot: true
       serviceAccountName: argocd-notifications-controller
       volumes:
         - configMap:
