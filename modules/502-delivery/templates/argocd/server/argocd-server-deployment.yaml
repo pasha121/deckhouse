@@ -83,6 +83,7 @@ spec:
         - command:
             - argocd-server
           env:
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
             - name: ARGOCD_SERVER_INSECURE
               valueFrom:
                 configMapKeyRef:

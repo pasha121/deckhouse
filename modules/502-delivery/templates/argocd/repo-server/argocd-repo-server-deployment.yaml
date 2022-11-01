@@ -109,6 +109,7 @@ spec:
             - -c
             - entrypoint.sh argocd-repo-server --redis argocd-redis:6379
           env:
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
             - name: ARGOCD_RECONCILIATION_TIMEOUT
               valueFrom:
                 configMapKeyRef:
