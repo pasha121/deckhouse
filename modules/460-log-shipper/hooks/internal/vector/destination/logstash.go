@@ -26,20 +26,13 @@ type Logstash struct {
 
 	Address string `json:"address"`
 
-	Encoding LogstashEncoding `json:"encoding,omitempty"`
+	Encoding Encoding `json:"encoding,omitempty"`
 
 	Mode string `json:"mode"`
 
 	TLS CommonTLS `json:"tls,omitempty"`
 
 	Keepalive LogstashKeepalive `json:"keepalive,omitempty"`
-}
-
-type LogstashEncoding struct {
-	ExceptFields    []string `json:"except_fields,omitempty"`
-	OnlyFields      []string `json:"only_fields,omitempty"`
-	Codec           string   `json:"codec,omitempty"`
-	TimestampFormat string   `json:"timestamp_format,omitempty"`
 }
 
 type LogstashKeepalive struct {
@@ -77,7 +70,7 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstas
 			Type:   "socket",
 			Inputs: set.New(),
 		},
-		Encoding: LogstashEncoding{
+		Encoding: Encoding{
 			Codec:           "json",
 			TimestampFormat: "rfc3339",
 		},

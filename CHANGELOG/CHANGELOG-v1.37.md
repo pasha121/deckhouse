@@ -20,6 +20,7 @@
 ## Fixes
 
 
+ - **[candi]** Remove `master` taint if `control-plane` taint was removed in a single node installation. [#2809](https://github.com/deckhouse/deckhouse/pull/2809)
  - **[candi]** Fix Yandex NAT Instance netplan config. [#2730](https://github.com/deckhouse/deckhouse/pull/2730)
     No impact for existing cluster. Only fixes cluster bootstap of `WithNATInstance` layot in Yandex Cloud.
  - **[candi]** Fix routes for multi-zonal clusters when using `WithNATInstance` layout. [#2544](https://github.com/deckhouse/deckhouse/pull/2544)
@@ -31,6 +32,7 @@
  - **[global-hooks]** Reduce static requests for control plane Pods. [#2588](https://github.com/deckhouse/deckhouse/pull/2588)
     Control plane components will restart.
  - **[go_lib]** Changed certificate re-issue time to 15 days before expiration to avoid useless `CertificateSecretExpiredSoon` alerts. [#2582](https://github.com/deckhouse/deckhouse/pull/2582)
+ - **[ingress-nginx]** Increase Ingress validation webhook timeout. [#2812](https://github.com/deckhouse/deckhouse/pull/2812)
  - **[ingress-nginx]** Reload ingress controller configuration on `additionalHeaders` field change. This will automatically add configured custom headers to the nginx.conf file without restarting the controller. [#2545](https://github.com/deckhouse/deckhouse/pull/2545)
  - **[istio]** Fix the `D8IstioGlobalControlplaneDoesntWork` alert. [#2714](https://github.com/deckhouse/deckhouse/pull/2714)
  - **[istio]** Fix `D8IstioAdditionalControlplaneDoesntWork` alert. [#2665](https://github.com/deckhouse/deckhouse/pull/2665)
@@ -39,6 +41,7 @@
     Added control plane alerts: 
     - `D8IstioGlobalControlplaneDoesntWork`
     - `D8IstioAdditionalControlplaneDoesntWork` [#2410](https://github.com/deckhouse/deckhouse/pull/2410)
+ - **[kube-dns]** Added "prefer_udp" to stub zones. [#2800](https://github.com/deckhouse/deckhouse/pull/2800)
  - **[kube-dns]** kube-dns ExternalName Service fix — clusterDomain is taken into account. [#2430](https://github.com/deckhouse/deckhouse/pull/2430)
  - **[linstor]** Improve kernel-headers detection for СentOS. [#2641](https://github.com/deckhouse/deckhouse/pull/2641)
  - **[linstor]** Fix scheduling CNI Pods on tainted nodes. [#2551](https://github.com/deckhouse/deckhouse/pull/2551)
@@ -46,6 +49,7 @@
  - **[log-shipper]** Stop generating pointless 'parse_json' transform, which improves performance. [#2662](https://github.com/deckhouse/deckhouse/pull/2662)
  - **[log-shipper]** Fix the bug when the many sources point to the same input and only the last is working. [#2662](https://github.com/deckhouse/deckhouse/pull/2662)
  - **[monitoring-kubernetes]** Add deployments to kube-state-metrics's allowlist. [#2636](https://github.com/deckhouse/deckhouse/pull/2636)
+ - **[node-manager]** Avoid "node-role.kubernetes.io/master" taint removal when it is explicitly set in the master NG [#2831](https://github.com/deckhouse/deckhouse/pull/2831)
  - **[node-manager]** Added VPA for early-oom daemonset. [#2695](https://github.com/deckhouse/deckhouse/pull/2695)
  - **[node-manager]** Fixed failing on not existing control-plane node labels. [#2670](https://github.com/deckhouse/deckhouse/pull/2670)
  - **[node-manager]** Fixed the `D8EarlyOOMPodIsNotReady` alert description. [#2541](https://github.com/deckhouse/deckhouse/pull/2541)
