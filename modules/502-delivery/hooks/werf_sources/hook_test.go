@@ -403,7 +403,7 @@ registries:
 
 	Context("templates", func() {
 
-		Context("Repo and registry configuratoin", func() {
+		Context("Repo and registry configurations", func() {
 			f := SetupHelmConfig(``)
 
 			values := internalValues{

@@ -139,7 +139,6 @@ func applyWerfSources(input *go_hook.HookInput, dc dependency.Container) error {
 
 	input.Values.Set("delivery.internal", vals)
 
-	// TODO (shvgn) tests
 	return nil
 }
 
@@ -149,15 +148,8 @@ func mapWerfSources(werfSources []werfSource, credentialsGetter credSecretMapper
 		return vals, fmt.Errorf("cannot fetch registry secrets: %v", err)
 	}
 
-	argoRepos, err := convArgoCDRepositories(werfSources, credentialsBySecretName)
-	if err != nil {
-		return vals, fmt.Errorf("cannot convert WerfSources to ArgoCD repositories: %v", err)
-	}
-
-	imageUpdaterRegistries, err := convImageUpdaterRegistries(werfSources)
-	if err != nil {
-		return vals, fmt.Errorf("cannot convert WerfSources to Image Updater registries: %v", err)
-	}
+	argoRepos := convArgoCDRepositories(werfSources, credentialsBySecretName)
+	imageUpdaterRegistries := convImageUpdaterRegistries(werfSources)
 
 	vals = internalValues{
 		ArgoCD:             internalArgoCDValues{Repositories: argoRepos},
@@ -167,7 +159,7 @@ func mapWerfSources(werfSources []werfSource, credentialsGetter credSecretMapper
 	return vals, nil
 }
 
-func convImageUpdaterRegistries(werfSources []werfSource) ([]imageUpdaterRegistry, error) {
+func convImageUpdaterRegistries(werfSources []werfSource) []imageUpdaterRegistry {
 	var registries []imageUpdaterRegistry
 	for _, ws := range werfSources {
 
@@ -189,10 +181,10 @@ func convImageUpdaterRegistries(werfSources []werfSource) ([]imageUpdaterRegistr
 			Default:     false,
 		})
 	}
-	return registries, nil
+	return registries
 }
 
-func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]registryCredentials) ([]argocdHelmOCIRepository, error) {
+func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName map[string]registryCredentials) []argocdHelmOCIRepository {
 	var argoRepos []argocdHelmOCIRepository
 	for _, ws := range werfSources {
 		if ws.argocdRepo == nil {
@@ -212,7 +204,7 @@ func convArgoCDRepositories(werfSources []werfSource, credentialsBySecretName ma
 			URL:      ws.repo,
 		})
 	}
-	return argoRepos, nil
+	return argoRepos
 }
 
 // cr.example.com/path/to/image -> cr.example.com
@@ -352,13 +344,13 @@ func fetchRegistryCredentials(getter credSecretMapper, werfSources []werfSource)
 			continue
 		}
 
-		dockerConfigJson, ok := dataByName[ws.pullSecretName]
+		dockerConfigJSON, ok := dataByName[ws.pullSecretName]
 		if !ok {
 			return nil, fmt.Errorf("secret %q is not found", ws.pullSecretName)
 		}
 
 		registry := firstSegment(ws.repo)
-		creds, err := parseDockerConfigJSONCredentials(dockerConfigJson, registry)
+		creds, err := parseDockerConfigJSONCredentials(dockerConfigJSON, registry)
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse credentials for registry %q in secret %q: %v",
 				registry, ws.pullSecretName, err)
