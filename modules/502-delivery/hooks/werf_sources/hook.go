@@ -45,7 +45,7 @@ type werfSource struct {
 	repo string
 
 	// container image registry API URL if the hostname is not the same as repository first segment
-	apiUrl string
+	apiURL string
 
 	// name of creadentials secret in d8-delivery namespace, the secret is expected to have
 	// dockerconfigjson format
@@ -66,7 +66,7 @@ type argocdRepoConfig struct {
 type imageUpdaterRegistry struct {
 	Name        string `json:"name"`
 	Prefix      string `json:"prefix"`
-	ApiUrl      string `json:"api_url"`
+	APIURL      string `json:"api_url"`
 	Credentials string `json:"credentials,omitempty"`
 	Default     bool   `json:"default"` // TODO (shvgn) accept this flag from the CRD
 
@@ -111,6 +111,7 @@ type internalValues struct {
 type internalArgoCDValues struct {
 	Repositories []argocdHelmOCIRepository `json:"repositories"`
 }
+
 type internalUpdaterValues struct {
 	Registries []imageUpdaterRegistry `json:"registries"`
 }
@@ -163,7 +164,7 @@ func convImageUpdaterRegistries(werfSources []werfSource) []imageUpdaterRegistry
 	var registries []imageUpdaterRegistry
 	for _, ws := range werfSources {
 
-		url := ws.apiUrl
+		url := ws.apiURL
 		if url == "" {
 			url = "https://" + firstSegment(ws.repo)
 		}
@@ -176,7 +177,7 @@ func convImageUpdaterRegistries(werfSources []werfSource) []imageUpdaterRegistry
 		registries = append(registries, imageUpdaterRegistry{
 			Name:        ws.name,
 			Prefix:      firstSegment(ws.repo),
-			ApiUrl:      url,
+			APIURL:      url,
 			Credentials: pullCreds,
 			Default:     false,
 		})
@@ -234,12 +235,12 @@ func filterWerfSource(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 		return nil, fmt.Errorf("spec.imageRepo field expected")
 	}
 
-	ws.apiUrl, ok, err = unstructured.NestedString(obj.Object, "spec", "apiUrl")
+	ws.apiURL, ok, err = unstructured.NestedString(obj.Object, "spec", "apiUrl")
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
-		ws.apiUrl = "https://" + firstSegment(ws.repo)
+		ws.apiURL = "https://" + firstSegment(ws.repo)
 	}
 
 	ws.pullSecretName, _, err = unstructured.NestedString(obj.Object, "spec", "pullSecretName")

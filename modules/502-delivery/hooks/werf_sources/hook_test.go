@@ -31,7 +31,6 @@ import (
 )
 
 var _ = Describe("Modules :: delivery :: hooks :: werf_sources ::", func() {
-
 	decUnstructured := yamlSrlzr.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	Context("parsing of WerfSources resource into inner formet", func() {
 		table.DescribeTable("Parsing werf_sources", func(wsyaml string, expected werfSource) {
@@ -58,7 +57,7 @@ spec:
 				werfSource{
 					name:   "minimal",
 					repo:   "cr.example.com/the/path",
-					apiUrl: "https://cr.example.com",
+					apiURL: "https://cr.example.com",
 					argocdRepo: &argocdRepoConfig{
 						project: "default",
 					},
@@ -81,7 +80,7 @@ spec:
 				werfSource{
 					name:   "full-object",
 					repo:   "cr.example.com/the/path",
-					apiUrl: "https://different.example.com",
+					apiURL: "https://different.example.com",
 
 					pullSecretName: "registry-credentials",
 					argocdRepo: &argocdRepoConfig{
@@ -101,7 +100,7 @@ spec:
 				werfSource{
 					name:   "repo-off",
 					repo:   "cr.example.com/the/path",
-					apiUrl: "https://cr.example.com",
+					apiURL: "https://cr.example.com",
 				}),
 
 			table.Entry("argocdRepoEnabled=false omits the repo config for Argo even when repo options are specified ", `
@@ -118,7 +117,7 @@ spec:
 				werfSource{
 					name:   "repo-off-yet-specified",
 					repo:   "cr.example.com/the/path",
-					apiUrl: "https://cr.example.com",
+					apiURL: "https://cr.example.com",
 				}),
 
 			table.Entry("Argo CD non-defaul project", `
@@ -134,7 +133,7 @@ spec:
 				werfSource{
 					name:   "not-default-project",
 					repo:   "cr.example.com/the/path",
-					apiUrl: "https://cr.example.com",
+					apiURL: "https://cr.example.com",
 					argocdRepo: &argocdRepoConfig{
 						project: "greater-good",
 					},
@@ -143,11 +142,10 @@ spec:
 	})
 
 	Context("Converting werf sources to configs ", func() {
-
 		ws1 := werfSource{
 			name:           "ws1",
 			repo:           "cr-1.example.com/the/path",
-			apiUrl:         "https://cr.example.com",
+			apiURL:         "https://cr.example.com",
 			pullSecretName: "registry-credentials-1",
 			argocdRepo: &argocdRepoConfig{
 				project: "default",
@@ -157,7 +155,7 @@ spec:
 		ws2 := werfSource{
 			name:           "ws2",
 			repo:           "cr-2.example.com/the/path",
-			apiUrl:         "https://registry-api.other.com",
+			apiURL:         "https://registry-api.other.com",
 			pullSecretName: "registry-credentials-2",
 			argocdRepo: &argocdRepoConfig{
 				project: "top-secret",
@@ -191,7 +189,6 @@ spec:
 			Expect(err).ToNot(HaveOccurred())
 		})
 		It("parses to argo cd repositories as expected", func() {
-
 			Expect(vals.ArgoCD.Repositories).To(ConsistOf(
 				argocdHelmOCIRepository{
 					Name:     "ws1",
@@ -216,39 +213,36 @@ spec:
 		})
 
 		It("parses to argo cd image updater registries as expected", func() {
-
 			Expect(vals.ArgoCDImageUpdater.Registries).To(ConsistOf(
 				imageUpdaterRegistry{
 					Name:        "ws1",
 					Prefix:      "cr-1.example.com",
-					ApiUrl:      "https://cr.example.com",
+					APIURL:      "https://cr.example.com",
 					Credentials: "pullsecret:d8-delivery/registry-credentials-1",
 					Default:     false,
 				},
 				imageUpdaterRegistry{
 					Name:        "ws2",
 					Prefix:      "cr-2.example.com",
-					ApiUrl:      "https://registry-api.other.com",
+					APIURL:      "https://registry-api.other.com",
 					Credentials: "pullsecret:d8-delivery/registry-credentials-2",
 					Default:     false,
 				},
 				imageUpdaterRegistry{
 					Name:    "ws3-no-creds",
 					Prefix:  "open.example.com",
-					ApiUrl:  "https://open.example.com",
+					APIURL:  "https://open.example.com",
 					Default: false,
 				},
 				imageUpdaterRegistry{
 					Name:        "ws4-no-repo",
 					Prefix:      "cr-4.example.com",
-					ApiUrl:      "https://cr-4.example.com",
+					APIURL:      "https://cr-4.example.com",
 					Credentials: "pullsecret:d8-delivery/registry-credentials-4",
 					Default:     false,
 				},
 			))
-
 		})
-
 	})
 
 	Context("YAML rendering of Argo CD repo", func() {
@@ -270,7 +264,6 @@ username: n-1
 `
 			Expect(err).ToNot(HaveOccurred())
 			Expect("\n" + string(b)).To(Equal(expected))
-
 		})
 		It("omits optional fields", func() {
 			b, err := yaml.Marshal(argocdHelmOCIRepository{
@@ -288,7 +281,6 @@ url: cr-1.example.com/the/path
 `
 			Expect(err).ToNot(HaveOccurred())
 			Expect("\n" + string(b)).To(Equal(expected))
-
 		})
 	})
 
@@ -297,7 +289,7 @@ url: cr-1.example.com/the/path
 			b, err := yaml.Marshal(imageUpdaterRegistry{
 				Name:        "ws1",
 				Prefix:      "cr-1.example.com",
-				ApiUrl:      "https://cr.example.com",
+				APIURL:      "https://cr.example.com",
 				Credentials: "pullsecret:d8-delivery/registry-credentials-1",
 				Default:     false,
 			})
@@ -316,7 +308,7 @@ prefix: cr-1.example.com
 			b, err := yaml.Marshal(imageUpdaterRegistry{
 				Name:    "ws1",
 				Prefix:  "cr-1.example.com",
-				ApiUrl:  "https://cr.example.com",
+				APIURL:  "https://cr.example.com",
 				Default: false,
 			})
 			expected := `
@@ -331,7 +323,6 @@ prefix: cr-1.example.com
 	})
 
 	XContext("Hook flow", func() {
-
 		f := HookExecutionConfigInit(`{}`, `{}`)
 		f.RegisterCRD("deckhouse.io", "v1alpha1", "WerfSource", false)
 
@@ -379,7 +370,6 @@ spec:
 			repo1, err := f.KubeClient().CoreV1().Secrets("d8-delivery").Get(context.Background(), "repo-ws1", metav1.GetOptions{})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(repo1.Data["username"]).To(Equal([]byte("n-1")))
-
 		})
 
 		It("creates configmap for Argo CD image updater", func() {
@@ -398,11 +388,9 @@ registries:
   prefix: open.example.com
 `))
 		})
-
 	})
 
 	Context("templates", func() {
-
 		Context("Repo and registry configurations", func() {
 			f := SetupHelmConfig(``)
 
@@ -428,14 +416,14 @@ registries:
 						{
 							Name:        "ws1",
 							Prefix:      "cr-1.example.com",
-							ApiUrl:      "https://cr.example.com",
+							APIURL:      "https://cr.example.com",
 							Credentials: "pullsecret:d8-delivery/registry-credentials-1",
 							Default:     false,
 						},
 						{
 							Name:    "ws3-no-creds",
 							Prefix:  "open.example.com",
-							ApiUrl:  "https://open.example.com",
+							APIURL:  "https://open.example.com",
 							Default: false,
 						},
 					},
@@ -476,7 +464,6 @@ registries:
 					"project": "default",
 					"url": "open.example.com/the/path"
 				}`))
-
 			})
 
 			It("creates configmap for Argo CD image updater", func() {
@@ -494,7 +481,6 @@ registries:
   name: ws3-no-creds
   prefix: open.example.com
 `))
-
 			})
 		})
 	})
