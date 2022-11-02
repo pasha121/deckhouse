@@ -29,7 +29,7 @@
 set -euo pipefail
 set -x
 
-VERSION="v2.4.15"
+VERSION="v2.4.16"
 
 # TODO check for the presence of git and yq
 
