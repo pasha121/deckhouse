@@ -73,7 +73,7 @@ help:
 
 
 GOLANGCI_VERSION = 1.46.2
-GOFUMPT_VERSION  = 0.1.1
+GOFUMPT_VERSION  = 0.4.0
 TRIVY_VERSION    = 0.28.1
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION    = 3.9.0
@@ -128,12 +128,15 @@ bin/gofumpt:
 	chmod u+x bin/gofumpt-$(GOFUMPT_VERSION)
 	ln -s gofumpt-$(GOFUMPT_VERSION) bin/gofumpt
 
-.PHONY: lint lint-fix
+.PHONY: lint lint-fix format
 lint: ## Run linter.
-	golangci-lint run
+	bin/golangci-lint run
 
 lint-fix: ## Fix lint violations.
-	golangci-lint run --fix
+	bin/golangci-lint run --fix
+
+format:
+	bin/gofumpt -e -w -extra .
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
