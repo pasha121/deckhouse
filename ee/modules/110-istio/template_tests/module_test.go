@@ -650,7 +650,7 @@ updatePolicy:
 			Expect(ingressSvc.Field("spec.type").String()).To(Equal("NodePort"))
 		})
 	})
-	FContext("ingress gateway controller with inlet LoadBalancer is enabled", func() {
+	Context("ingress gateway controller with inlet LoadBalancer is enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -664,7 +664,7 @@ updatePolicy:
       annotations:
         aaa: bbb
     resourcesRequests:
-      mode: STATIC
+      mode: Static
 `)
 			f.HelmRender()
 		})
