@@ -6,7 +6,6 @@ controlPlaneManagerEnabled: true
 dashboardEnabled: true
 deckhouseEnabled: true
 deckhouseWebEnabled: true
-deliveryEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
 helmEnabled: true
