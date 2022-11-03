@@ -309,8 +309,7 @@ type credSecretMapperImpl struct {
 func (m *credSecretMapperImpl) Get(ctx context.Context) (map[string][]byte, error) {
 	secretList, err := m.client.CoreV1().Secrets(namespace).
 		List(context.Background(),
-			// metav1.ListOptions{FieldSelector: "type=kubernetes.io/dockerconfigjson"},
-			metav1.ListOptions{},
+			metav1.ListOptions{FieldSelector: "type=kubernetes.io/dockerconfigjson"},
 		)
 	if err != nil {
 		return nil, fmt.Errorf("cannot list secrets: %v", err)
@@ -318,9 +317,6 @@ func (m *credSecretMapperImpl) Get(ctx context.Context) (map[string][]byte, erro
 
 	dataByName := make(map[string][]byte)
 	for _, secret := range secretList.Items {
-		if secret.Type != "kubernetes.io/dockerconfigjson" {
-			continue
-		}
 		name := secret.GetName()
 		data, ok := secret.Data[corev1.DockerConfigJsonKey]
 		if !ok {
