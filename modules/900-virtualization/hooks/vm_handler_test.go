@@ -47,6 +47,11 @@ var _ = Describe("Modules :: virtualization :: hooks :: vm_handler ::", func() {
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
 ---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: virtualmachines.kubevirt.io
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: VirtualMachine
 metadata:

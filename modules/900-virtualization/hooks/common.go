@@ -16,8 +16,17 @@ limitations under the License.
 
 package hooks
 
+import (
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
 const (
 	initValuesString       = `{"virtualization":{"internal":{"webhookCert":{}},"vmCIDRs":["10.10.10.0/24"]},"global":{"discovery":{"clusterDomain":"mycluster.local"}}}`
 	initConfigValuesString = `{}`
 	gv                     = "deckhouse.io/v1alpha1"
 )
+
+func applyCRDExistenseFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return true, nil
+}

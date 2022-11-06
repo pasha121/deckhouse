@@ -22,6 +22,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,18 +34,20 @@ import (
 )
 
 const (
-	deckhouseVMSnapshot = "vmHandlerDeckhouseVM"
-	kubevirtVMSnapshot  = "vmHandlerKubevirtVM"
-	diskNamesSnapshot   = "disksNamesSnapshot"
+	deckhouseVMSnapshot    = "vmHandlerDeckhouseVM"
+	kubevirtVMSnapshot     = "vmHandlerKubevirtVM"
+	kubevirtVMsCRDSnapshot = "vmHandlerKubevirtVMCRD"
+	diskNamesSnapshot      = "disksNamesSnapshot"
 )
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+var vmHandlerHookConfig = &go_hook.HookConfig{
 	Queue: "/modules/virtualization/vm-handler",
 	Kubernetes: []go_hook.KubernetesConfig{
+		// A binding with dynamic kind has index 0 for simplicity.
 		{
 			Name:       kubevirtVMSnapshot,
-			ApiVersion: "kubevirt.io/v1",
-			Kind:       "VirtualMachine",
+			ApiVersion: "",
+			Kind:       "",
 			FilterFunc: applyKubevirtVMFilter,
 		},
 		{
@@ -59,8 +62,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Disk",
 			FilterFunc: applyDiskNamesFilter,
 		},
+		{
+			Name:       kubevirtVMsCRDSnapshot,
+			ApiVersion: "apiextensions.k8s.io/v1",
+			Kind:       "CustomResourceDefinition",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"virtualmachines.kubevirt.io"},
+			},
+			FilterFunc: applyCRDExistenseFilter,
+		},
 	},
-}, handleVMs)
+}
+
+var _ = sdk.RegisterFunc(vmHandlerHookConfig, handleVMs)
+
+type InstanceClassCrdInfo struct {
+	Name string
+	Spec interface{}
+}
 
 func applyKubevirtVMFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	vm := &virtv1.VirtualMachine{}
@@ -100,6 +119,29 @@ func applyDiskNamesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 // synopsis:
 //   TODO
 func handleVMs(input *go_hook.HookInput) error {
+	// KubeVirt manages it's own CRDs, so we need to wait for them before starting the watch
+	fmt.Println(len(input.Snapshots[kubevirtVMsCRDSnapshot]))
+	if vmHandlerHookConfig.Kubernetes[0].Kind == "" {
+		if len(input.Snapshots[kubevirtVMsCRDSnapshot]) > 0 {
+			// KubeVirt installed
+			input.LogEntry.Infof("KubeVirt VirtualMachine CRD installed, update kind for binding VirtualMachines.kubevirt.io")
+			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
+				Name:       kubevirtVMSnapshot,
+				Action:     "UpdateKind",
+				ApiVersion: "kubevirt.io/v1",
+				Kind:       "VirtualMachine",
+			})
+			// Save new kind as current kind.
+			vmHandlerHookConfig.Kubernetes[0].Kind = "VirtualMachine"
+			vmHandlerHookConfig.Kubernetes[0].ApiVersion = "kubevirt.io/v1"
+			// Binding changed, hook will be restarted with new objects in snapshot.
+			return nil
+		}
+		// KubeVirt is not yet installed, do nothing
+		return nil
+	}
+
+	// Start main hook logic
 	kubevirtVMSnap := input.Snapshots[kubevirtVMSnapshot]
 	deckhouseVMSnap := input.Snapshots[deckhouseVMSnapshot]
 	diskNameSnap := input.Snapshots[diskNamesSnapshot]
@@ -230,7 +272,9 @@ func setVMFields(d8vm *v1alpha1.VirtualMachine, vm *virtv1.VirtualMachine) error
 	cloudInit := make(map[string]interface{})
 	if d8vm.Spec.CloudInit != nil {
 		err := yaml.Unmarshal([]byte(d8vm.Spec.CloudInit.UserData), &cloudInit)
-		return fmt.Errorf("cannot parse cloudInit config for VirtualMachine: %v", err)
+		if err != nil {
+			return fmt.Errorf("cannot parse cloudInit config for VirtualMachine: %v", err)
+		}
 	}
 	if d8vm.Spec.SSHPublicKey != "" {
 		cloudInit["ssh_authorized_keys"] = []string{d8vm.Spec.SSHPublicKey}

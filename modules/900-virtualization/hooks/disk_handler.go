@@ -21,12 +21,13 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
+	ktypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 
@@ -40,9 +41,16 @@ const (
 	dataVolumeSnapshot         = "diskHandlerDataVolume"
 )
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+var diskHandlerHookConfig = &go_hook.HookConfig{
 	Queue: "/modules/virtualization/disk-handler",
 	Kubernetes: []go_hook.KubernetesConfig{
+		// A binding with dynamic kind has index 0 for simplicity.
+		{
+			Name:       dataVolumeSnapshot,
+			ApiVersion: "",
+			Kind:       "",
+			FilterFunc: applyDataVolumeFilter,
+		},
 		{
 			Name:       diskTypesSnapshot,
 			ApiVersion: gv,
@@ -62,13 +70,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyPublicImageSourceFilter,
 		},
 		{
-			Name:       dataVolumeSnapshot,
-			ApiVersion: "cdi.kubevirt.io/v1beta1",
-			Kind:       "DataVolume",
-			FilterFunc: applyDataVolumeFilter,
+			Name:       kubevirtVMsCRDSnapshot,
+			ApiVersion: "apiextensions.k8s.io/v1",
+			Kind:       "CustomResourceDefinition",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"datavolumes.cdi.kubevirt.io"},
+			},
+			FilterFunc: applyCRDExistenseFilter,
 		},
 	},
-}, handleDisks)
+}
+
+var _ = sdk.RegisterFunc(diskHandlerHookConfig, handleDisks)
 
 type DiskTypeSnapshot struct {
 	Name      string
@@ -79,7 +92,7 @@ type DiskTypeSnapshot struct {
 type DiskSnapshot struct {
 	Name      string
 	Namespace string
-	UID       types.UID
+	UID       ktypes.UID
 	Type      string
 	Size      resource.Quantity
 	Source    v1alpha1.ImageSourceRef
@@ -159,6 +172,28 @@ func applyDataVolumeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 // synopsis:
 //   TODO
 func handleDisks(input *go_hook.HookInput) error {
+	// CDI manages it's own CRDs, so we need to wait for them before starting the watch
+	if diskHandlerHookConfig.Kubernetes[0].Kind == "" {
+		if len(input.Snapshots[kubevirtVMIsCRDSnapshot]) > 0 {
+			// CDI installed
+			input.LogEntry.Infof("CDI DataVolume CRD installed, update kind for binding datavolumes.cdi.kubevirt.io")
+			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
+				Name:       dataVolumeSnapshot,
+				Action:     "UpdateKind",
+				ApiVersion: "cdi.kubevirt.io/v1beta1",
+				Kind:       "DataVolume",
+			})
+			// Save new kind as current kind.
+			diskHandlerHookConfig.Kubernetes[0].Kind = "DataVolume"
+			diskHandlerHookConfig.Kubernetes[0].ApiVersion = "cdi.kubevirt.io/v1beta1"
+			// Binding changed, hook will be restarted with new objects in snapshot.
+			return nil
+		}
+		// CDI is not yet installed, do nothing
+		return nil
+	}
+
+	// Start main hook logic
 	diskTypeSnap := input.Snapshots[diskTypesSnapshot]
 	diskSnap := input.Snapshots[disksSnapshot]
 	publicImageSourceSnap := input.Snapshots[publicImageSourcesSnapshot]

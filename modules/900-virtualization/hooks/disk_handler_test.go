@@ -48,6 +48,11 @@ var _ = Describe("Modules :: virtualization :: hooks :: disk_handler ::", func()
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
 ---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: datavolumes.cdi.kubevirt.io
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: PublicImageSource
 metadata:

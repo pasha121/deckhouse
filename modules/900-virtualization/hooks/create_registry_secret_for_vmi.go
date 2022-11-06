@@ -31,9 +31,10 @@ import (
 )
 
 const (
-	vmisSnapshot       = "vmis"
-	secretsSnapshot    = "registry_secrets_namespaces"
-	d8RegistrySnapshot = "d8_registry_secret"
+	vmisSnapshot            = "vmis"
+	secretsSnapshot         = "registry_secrets_namespaces"
+	d8RegistrySnapshot      = "d8_registry_secret"
+	kubevirtVMIsCRDSnapshot = "vmHandlerKubevirtVMICRD"
 
 	virtRegistrySecretName = "virt-deckhouse-registry"
 )
@@ -43,13 +44,14 @@ type registrySecret struct {
 	Config    string
 }
 
-var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+var createRegistrySecretForVMIHookConfig = &go_hook.HookConfig{
 	Queue: "/modules/virtualization/registry-secrets",
 	Kubernetes: []go_hook.KubernetesConfig{
+		// A binding with dynamic kind has index 0 for simplicity.
 		{
 			Name:       vmisSnapshot,
-			ApiVersion: "kubevirt.io/v1",
-			Kind:       "VirtualMachineInstance",
+			ApiVersion: "",
+			Kind:       "",
 			FilterFunc: applyNamespaceFilter,
 		},
 		{
@@ -75,8 +77,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyRegistrySecretFilter,
 		},
+		{
+			Name:       kubevirtVMsCRDSnapshot,
+			ApiVersion: "apiextensions.k8s.io/v1",
+			Kind:       "CustomResourceDefinition",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"virtualmachineinstances.kubevirt.io"},
+			},
+			FilterFunc: applyCRDExistenseFilter,
+		},
 	},
-}, handleVMI)
+}
+
+var _ = sdk.RegisterFunc(createRegistrySecretForVMIHookConfig, handleVMI)
 
 func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetNamespace(), nil
@@ -141,6 +154,28 @@ func prepareVirtRegistrySecret(namespace, dockerCfg string) *corev1.Secret {
 //   for envery VMI pod. This is temproray solution, until kubevirt
 //   will have native opportunity for specifying registrySecrets.
 func handleVMI(input *go_hook.HookInput) error {
+	// KubeVirt manages it's own CRDs, so we need to wait for them before starting the watch
+	if createRegistrySecretForVMIHookConfig.Kubernetes[0].Kind == "" {
+		if len(input.Snapshots[kubevirtVMIsCRDSnapshot]) > 0 {
+			// KubeVirt installed
+			input.LogEntry.Infof("KubeVirt VirtualMachine CRD installed, update kind for binding VirtualMachines.kubevirt.io")
+			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
+				Name:       vmisSnapshot,
+				Action:     "UpdateKind",
+				ApiVersion: "kubevirt.io/v1",
+				Kind:       "VirtualMachineInstance",
+			})
+			// Save new kind as current kind.
+			createRegistrySecretForVMIHookConfig.Kubernetes[0].Kind = "VirtualMachineInstance"
+			createRegistrySecretForVMIHookConfig.Kubernetes[0].ApiVersion = "kubevirt.io/v1"
+			// Binding changed, hook will be restarted with new objects in snapshot.
+			return nil
+		}
+		// KubeVirt is not yet installed, do nothing
+		return nil
+	}
+
+	// Start main hook logic
 	d8RegistrySnap := input.Snapshots[d8RegistrySnapshot]
 	if len(d8RegistrySnap) == 0 {
 		input.LogEntry.Warnln("Registry secret not found. Skip")
