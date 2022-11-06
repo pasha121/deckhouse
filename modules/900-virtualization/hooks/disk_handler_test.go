@@ -30,6 +30,10 @@ var _ = Describe("Modules :: virtualization :: hooks :: disk_handler ::", func()
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "PublicImageSource", true)
 	f.RegisterCRD("cdi.kubevirt.io", "v1beta1", "DataVolume", true)
 
+	// Set Kind for binding.
+	diskHandlerHookConfig.Kubernetes[0].Kind = "DataVolume"
+	diskHandlerHookConfig.Kubernetes[0].ApiVersion = "cdi.kubevirt.io/v1beta1"
+
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(
@@ -47,11 +51,6 @@ var _ = Describe("Modules :: virtualization :: hooks :: disk_handler ::", func()
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: datavolumes.cdi.kubevirt.io
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PublicImageSource

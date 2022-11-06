@@ -120,7 +120,6 @@ func applyDiskNamesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 //   TODO
 func handleVMs(input *go_hook.HookInput) error {
 	// KubeVirt manages it's own CRDs, so we need to wait for them before starting the watch
-	fmt.Println(len(input.Snapshots[kubevirtVMsCRDSnapshot]))
 	if vmHandlerHookConfig.Kubernetes[0].Kind == "" {
 		if len(input.Snapshots[kubevirtVMsCRDSnapshot]) > 0 {
 			// KubeVirt installed

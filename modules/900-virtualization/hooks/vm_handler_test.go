@@ -29,6 +29,10 @@ var _ = Describe("Modules :: virtualization :: hooks :: vm_handler ::", func() {
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "VirtualMachine", true)
 	f.RegisterCRD("kubevirt.io", "v1", "VirtualMachine", true)
 
+	// Set Kind for binding.
+	vmHandlerHookConfig.Kubernetes[0].Kind = "VirtualMachine"
+	vmHandlerHookConfig.Kubernetes[0].ApiVersion = "kubevirt.io/v1"
+
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(
@@ -46,11 +50,6 @@ var _ = Describe("Modules :: virtualization :: hooks :: vm_handler ::", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: virtualmachines.kubevirt.io
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: VirtualMachine

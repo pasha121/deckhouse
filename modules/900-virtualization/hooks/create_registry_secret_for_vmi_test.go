@@ -85,6 +85,10 @@ var _ = Describe("Kubevirt hooks :: generate registry secret for virtual machine
 	f := HookExecutionConfigInit(`{"global":{}}`, "")
 	f.RegisterCRD("kubevirt.io", "v1", "VirtualMachineInstance", true)
 
+	// Set Kind for binding.
+	createRegistrySecretForVMIHookConfig.Kubernetes[0].Kind = "VirtualMachineInstance"
+	createRegistrySecretForVMIHookConfig.Kubernetes[0].ApiVersion = "kubevirt.io/v1"
+
 	const ns1 = "ns1"
 	const ns2 = "ns2"
 	const ns3 = "ns3"
