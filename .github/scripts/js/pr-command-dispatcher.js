@@ -1,4 +1,4 @@
-const {tryParseAbortE2eCluster, tryParseRunE2e} = require("./e2e/slash_workflow_comand");
+const {tryParseAbortE2eCluster, tryParseRunE2e} = require("./e2e/slash_workflow_command");
 const {commentCommandRecognition} = require("./comments");
 const {extractCommandFromComment, reactToComment, startWorkflow} = require("./ci");
 
