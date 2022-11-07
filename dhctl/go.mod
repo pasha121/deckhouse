@@ -3,7 +3,7 @@ module github.com/deckhouse/deckhouse/dhctl
 go 1.15
 
 require (
-	github.com/BurntSushi/toml v0.3.1
+	github.com/BurntSushi/toml v1.2.1
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/alessio/shellescape v1.4.1
 	github.com/fatih/color v1.9.0
