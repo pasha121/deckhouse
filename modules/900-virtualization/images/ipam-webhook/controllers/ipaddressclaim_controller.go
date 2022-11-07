@@ -42,13 +42,13 @@ type IPAMValidatorController struct {
 }
 
 func (c IPAMValidatorController) Start(ctx context.Context) error {
-	c.Logger.Infof("starting ipaddressclaims controller")
+	c.Logger.Infof("starting ipaddressleases controller")
 
-	lw := cache.NewListWatchFromClient(c.RESTClient, "ipaddressclaims", v1.NamespaceAll, fields.Everything())
-	informer := cache.NewSharedIndexInformer(lw, &d8v1alpha1.IPAddressClaim{}, 12*time.Hour,
+	lw := cache.NewListWatchFromClient(c.RESTClient, "ipaddressleases", v1.NamespaceAll, fields.Everything())
+	informer := cache.NewSharedIndexInformer(lw, &d8v1alpha1.IPAddressLease{}, 12*time.Hour,
 		cache.Indexers{
 			"namespace_name": func(obj interface{}) ([]string, error) {
-				return []string{obj.(*d8v1alpha1.IPAddressClaim).GetName()}, nil
+				return []string{obj.(*d8v1alpha1.IPAddressLease).GetName()}, nil
 			},
 		},
 	)
@@ -75,15 +75,15 @@ func (c IPAMValidatorController) Start(ctx context.Context) error {
 	go c.Webhook.Start()
 
 	<-ctx.Done()
-	c.Logger.Infof("shutting down ipaddressclaims controller")
+	c.Logger.Infof("shutting down ipaddressleases controller")
 
 	return nil
 }
 
 func (c *IPAMValidatorController) addFunc(obj interface{}) {
-	claim, ok := obj.(*d8v1alpha1.IPAddressClaim)
+	claim, ok := obj.(*d8v1alpha1.IPAddressLease)
 	if !ok {
-		// object is not IPAddressClaim
+		// object is not IPAddressLease
 		return
 	}
 	ip := utils.NameToIP(claim.GetName())
@@ -96,9 +96,9 @@ func (c *IPAMValidatorController) addFunc(obj interface{}) {
 }
 
 func (c *IPAMValidatorController) deleteFunc(obj interface{}) {
-	claim, ok := obj.(*d8v1alpha1.IPAddressClaim)
+	claim, ok := obj.(*d8v1alpha1.IPAddressLease)
 	if !ok {
-		// object is not IPAddressClaim
+		// object is not IPAddressLease
 		return
 	}
 	ip := utils.NameToIP(claim.GetName())

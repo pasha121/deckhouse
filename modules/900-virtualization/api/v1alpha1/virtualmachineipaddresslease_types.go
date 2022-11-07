@@ -20,39 +20,40 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// IPAddressClaimSpec defines the desired state of IPAddressClaim
-type IPAddressClaimSpec struct {
+// VirtualMachineIPAddressLeaseSpec defines the desired state of VirtualMachineIPAddressLease
+type VirtualMachineIPAddressLeaseSpec struct {
 	// Static represents the static claim
 	Static bool   `json:"static,omitempty"`
 	VMName string `json:"vmName,omitempty"`
 }
 
-// IPAddressClaimStatus defines the observed state of IPAddressClaim
-type IPAddressClaimStatus struct {
+// VirtualMachineIPAddressLeaseStatus defines the observed state of VirtualMachineIPAddressLease
+type VirtualMachineIPAddressLeaseStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:printcolumn:JSONPath=".spec.static",name=Static,type=string
+//+kubebuilder:resource:shortName={"vmip","vmips"}
 
-// IPAddressClaim is the Schema for the ipaddressclaims API
-type IPAddressClaim struct {
+// VirtualMachineIPAddressLease is the Schema for the virtualmachineipaddressleases API
+type VirtualMachineIPAddressLease struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   IPAddressClaimSpec   `json:"spec,omitempty"`
-	Status IPAddressClaimStatus `json:"status,omitempty"`
+	Spec   VirtualMachineIPAddressLeaseSpec   `json:"spec,omitempty"`
+	Status VirtualMachineIPAddressLeaseStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// IPAddressClaimList contains a list of IPAddressClaim
-type IPAddressClaimList struct {
+// VirtualMachineIPAddressLeaseList contains a list of VirtualMachineIPAddressLease
+type VirtualMachineIPAddressLeaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []IPAddressClaim `json:"items"`
+	Items           []VirtualMachineIPAddressLease `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&IPAddressClaim{}, &IPAddressClaimList{})
+	SchemeBuilder.Register(&VirtualMachineIPAddressLease{}, &VirtualMachineIPAddressLeaseList{})
 }

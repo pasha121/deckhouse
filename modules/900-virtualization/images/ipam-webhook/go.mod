@@ -3,7 +3,7 @@ module ipam-webhook
 go 1.18
 
 require (
-	github.com/deckhouse/deckhouse v1.34.1-0.20221010154431-c842d046dfe4
+	github.com/deckhouse/deckhouse v1.34.1-0.20221107200659-9e257c3172cd
 	github.com/metal-stack/go-ipam v1.11.2
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0

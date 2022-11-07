@@ -24,8 +24,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// DiskSpec defines the desired state of Disk
-type DiskSpec struct {
+// VirtualMachineDiskSpec defines the desired state of VirtualMachineDisk
+type VirtualMachineDiskSpec struct {
 	// Type represents the type for newly created disk
 	Type string `json:"type,omitempty"`
 	// Type represents the size for newly created disk
@@ -42,31 +42,32 @@ type ImageSourceRef struct {
 	Scope ImageSourceScope `json:"scope,omitempty"`
 }
 
-// DiskStatus defines the observed state of Disk
-type DiskStatus struct {
+// VirtualMachineDiskStatus defines the observed state of VirtualMachineDisk
+type VirtualMachineDiskStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:shortName={"vmd","vmdisk","vmdisks"}
 
-// Disk is the Schema for the disks API
-type Disk struct {
+// VirtualMachineDisk is the Schema for the virtualmachinedisks API
+type VirtualMachineDisk struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DiskSpec   `json:"spec,omitempty"`
-	Status DiskStatus `json:"status,omitempty"`
+	Spec   VirtualMachineDiskSpec   `json:"spec,omitempty"`
+	Status VirtualMachineDiskStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// DiskList contains a list of Disk
-type DiskList struct {
+// VirtualMachineDiskList contains a list of VirtualMachineDisk
+type VirtualMachineDiskList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Disk `json:"items"`
+	Items           []VirtualMachineDisk `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Disk{}, &DiskList{})
+	SchemeBuilder.Register(&VirtualMachineDisk{}, &VirtualMachineDiskList{})
 }

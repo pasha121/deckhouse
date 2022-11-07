@@ -25,9 +25,9 @@ import (
 
 var _ = Describe("Modules :: virtualization :: hooks :: disk_handler ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "Disk", true)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "DiskType", true)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "PublicImageSource", true)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "VirtualMachineDisk", true)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "VirtualMachineDiskClass", true)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ClusterVirtualMachineImage", true)
 	f.RegisterCRD("cdi.kubevirt.io", "v1beta1", "DataVolume", true)
 
 	// Set Kind for binding.
@@ -47,13 +47,13 @@ var _ = Describe("Modules :: virtualization :: hooks :: disk_handler ::", func()
 		})
 	})
 
-	Context("Disks creation", func() {
+	Context("VirtualMachineDisks creation", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: PublicImageSource
+kind: ClusterVirtualMachineImage
 metadata:
   name: centos-7
 spec:
@@ -61,7 +61,7 @@ spec:
     url: "docker://dev-registry.deckhouse.io/sys/deckhouse-oss:8ebc42b654b8e98d9de0f061087cc3b7b3f341ea62374382ece804fb-1658984394800"
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: DiskType
+kind: VirtualMachineDiskClass
 metadata:
   name: linstor-slow
 spec:
@@ -70,7 +70,7 @@ spec:
   storageClassName: linstor-data-r2
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Disk
+kind: VirtualMachineDisk
 metadata:
   name: mydata
   namespace: ns1
@@ -85,7 +85,7 @@ spec:
 			f.RunHook()
 		})
 
-		It("Creates DataVolume out of Disk", func() {
+		It("Creates DataVolume out of VirtualMachineDisk", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			By("Checking existing VM, IPAddressClaim is not static, should be kept")
 			dataVolume := f.KubernetesResource("DataVolume", "ns1", "mydata")

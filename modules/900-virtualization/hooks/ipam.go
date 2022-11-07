@@ -41,8 +41,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		{
 			Name:       ipsSnapshot,
 			ApiVersion: gv,
-			Kind:       "IPAddressClaim",
-			FilterFunc: applyIPAddressClaimFilter,
+			Kind:       "VirtualMachineIPAddressLease",
+			FilterFunc: applyVirtualMachineIPAddressLeaseFilter,
 		},
 		{
 			Name:       vmsSnapshot,
@@ -53,7 +53,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleVMsAndIPs)
 
-type IPAddressClaimSnapshot struct {
+type VirtualMachineIPAddressLeaseSnapshot struct {
 	Name      string
 	Namespace string
 	Address   string
@@ -68,18 +68,18 @@ type VirtualMachineSnapshot struct {
 	StatusIPAddress string
 }
 
-func applyIPAddressClaimFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	claim := &v1alpha1.IPAddressClaim{}
+func applyVirtualMachineIPAddressLeaseFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	claim := &v1alpha1.VirtualMachineIPAddressLease{}
 	err := sdk.FromUnstructured(obj, claim)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert object to IPAddressClaim: %v", err)
+		return nil, fmt.Errorf("cannot convert object to VirtualMachineIPAddressLease: %v", err)
 	}
 	address := nameToIP(claim.Name)
 	if address == "" {
-		return nil, fmt.Errorf("cannot convert IPAddressClaim name to IP address: %s", claim.Name)
+		return nil, fmt.Errorf("cannot convert VirtualMachineIPAddressLease name to IP address: %s", claim.Name)
 	}
 
-	return &IPAddressClaimSnapshot{
+	return &VirtualMachineIPAddressLeaseSnapshot{
 		Name:      claim.Name,
 		Namespace: claim.Namespace,
 		Address:   address,
@@ -111,16 +111,16 @@ func handleVMsAndIPs(input *go_hook.HookInput) error {
 	ipSnap := input.Snapshots[ipsSnapshot]
 	vmSnap := input.Snapshots[vmsSnapshot]
 	if len(ipSnap) == 0 && len(vmSnap) == 0 {
-		input.LogEntry.Warnln("IPAddressClaim and VirtualMachine not found. Skip")
+		input.LogEntry.Warnln("VirtualMachineIPAddressLease and VirtualMachine not found. Skip")
 		return nil
 	}
 
 	allocatedIPs := make(map[string]string)
 
 CLAIM_LOOP:
-	// Handle IPAddressClaims
+	// Handle VirtualMachineIPAddressLeases
 	for _, sRaw := range ipSnap {
-		claim := sRaw.(*IPAddressClaimSnapshot)
+		claim := sRaw.(*VirtualMachineIPAddressLeaseSnapshot)
 
 		// Address is static, but currently not in use
 		if claim.Static && claim.VMName == "" {
@@ -144,9 +144,9 @@ CLAIM_LOOP:
 				input.LogEntry.Warnf("VM %s/%s for IP %s is found, but other IP %s requested, releasing", vm.Namespace, vm.Name, claim.Name, vm.StaticIPAddress)
 				if claim.Static {
 					patch := map[string]interface{}{"spec": map[string]string{"vmName": ""}}
-					input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", claim.Namespace, claim.Name)
+					input.PatchCollector.MergePatch(patch, gv, "VirtualMachineIPAddressLease", claim.Namespace, claim.Name)
 				} else {
-					input.PatchCollector.Delete(gv, "IPAddressClaim", claim.Namespace, claim.Name)
+					input.PatchCollector.Delete(gv, "VirtualMachineIPAddressLease", claim.Namespace, claim.Name)
 					continue CLAIM_LOOP
 				}
 			}
@@ -154,7 +154,7 @@ CLAIM_LOOP:
 			// VM requested static IP, mark claim as static
 			if vm.StaticIPAddress == claim.Address && !claim.Static {
 				patch := map[string]interface{}{"spec": map[string]bool{"static": true}}
-				input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", claim.Namespace, claim.Name)
+				input.PatchCollector.MergePatch(patch, gv, "VirtualMachineIPAddressLease", claim.Namespace, claim.Name)
 			}
 
 			if vm.StatusIPAddress != claim.Address {
@@ -169,14 +169,14 @@ CLAIM_LOOP:
 
 		// VM is not found, release the dynamic lease
 		if !claim.Static {
-			input.PatchCollector.Delete(gv, "IPAddressClaim", claim.Namespace, claim.Name)
+			input.PatchCollector.Delete(gv, "VirtualMachineIPAddressLease", claim.Namespace, claim.Name)
 			continue CLAIM_LOOP
 		}
 
 		// VM is not found, preserve the static lease
 		if claim.VMName != "" {
 			patch := map[string]interface{}{"spec": map[string]string{"vmName": ""}}
-			input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", claim.Namespace, claim.Name)
+			input.PatchCollector.MergePatch(patch, gv, "VirtualMachineIPAddressLease", claim.Namespace, claim.Name)
 		}
 
 		// Add IP to allocation map
@@ -213,7 +213,7 @@ CLAIM_LOOP:
 			if v == "" && found {
 				// Static Claim is found, needs to update vmName
 				patch := map[string]interface{}{"spec": map[string]interface{}{"vmName": vm.Name, "static": true}}
-				input.PatchCollector.MergePatch(patch, gv, "IPAddressClaim", vm.Namespace, ipToName(ip))
+				input.PatchCollector.MergePatch(patch, gv, "VirtualMachineIPAddressLease", vm.Namespace, ipToName(ip))
 				allocatedIPs[ip] = vmString
 			}
 			if v == "" && !found {
@@ -240,16 +240,16 @@ CLAIM_LOOP:
 		}
 
 		// Claim is not found, create a new one
-		claim := &v1alpha1.IPAddressClaim{
+		claim := &v1alpha1.VirtualMachineIPAddressLease{
 			TypeMeta: metav1.TypeMeta{
-				Kind:       "IPAddressClaim",
+				Kind:       "VirtualMachineIPAddressLease",
 				APIVersion: gv,
 			},
 			ObjectMeta: v1.ObjectMeta{
 				Name:      ipToName(ip),
 				Namespace: vm.Namespace,
 			},
-			Spec: v1alpha1.IPAddressClaimSpec{
+			Spec: v1alpha1.VirtualMachineIPAddressLeaseSpec{
 				VMName: vm.Name,
 			},
 		}

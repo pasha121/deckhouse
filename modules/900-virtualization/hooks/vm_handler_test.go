@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("Modules :: virtualization :: hooks :: vm_handler ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "Disk", true)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "VirtualMachineDisk", true)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "VirtualMachine", true)
 	f.RegisterCRD("kubevirt.io", "v1", "VirtualMachine", true)
 
@@ -75,7 +75,7 @@ status:
   ipAddress: 10.10.10.10
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Disk
+kind: VirtualMachineDisk
 metadata:
   name: mydata
   namespace: ns1
@@ -92,7 +92,7 @@ spec:
 
 		It("Creates VirtualMachine and boot Disk", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			disk := f.KubernetesResource("Disk", "default", "vm1-boot")
+			disk := f.KubernetesResource("VirtualMachineDisk", "default", "vm1-boot")
 			Expect(disk).To(Not(BeEmpty()))
 			vm := f.KubernetesResource("virtualmachines.kubevirt.io", "default", "vm1")
 			Expect(vm).To(Not(BeEmpty()))

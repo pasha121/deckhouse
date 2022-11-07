@@ -5,20 +5,25 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
   creationTimestamp: null
-  name: disktypes.deckhouse.io
+  name: virtualmachineipaddressleases.deckhouse.io
 spec:
   group: deckhouse.io
   names:
-    kind: DiskType
-    listKind: DiskTypeList
-    plural: disktypes
-    singular: disktype
-  scope: Cluster
+    kind: VirtualMachineIPAddressLease
+    listKind: VirtualMachineIPAddressLeaseList
+    plural: virtualmachineipaddressleases
+    singular: virtualmachineipaddresslease
+  scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.static
+      name: Static
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: DiskType is the Schema for the disktypes API
+        description: VirtualMachineIPAddressLease is the Schema for the virtualmachineipaddressleases
+          API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,26 +38,18 @@ spec:
           metadata:
             type: object
           spec:
-            description: DiskTypeSpec defines the desired state of DiskType
+            description: VirtualMachineIPAddressLeaseSpec defines the desired state
+              of VirtualMachineIPAddressLease
             properties:
-              accessModes:
-                description: 'accessModes contains the desired access modes the volume
-                  should have. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1'
-                items:
-                  type: string
-                type: array
-              storageClassName:
-                description: 'storageClassName is the name of the StorageClass required
-                  by the claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1'
-                type: string
-              volumeMode:
-                description: volumeMode defines what type of volume is required by
-                  the claim. Value of Filesystem is implied when not included in claim
-                  spec.
+              static:
+                description: Static represents the static claim
+                type: boolean
+              vmName:
                 type: string
             type: object
           status:
-            description: DiskTypeStatus defines the observed state of DiskType
+            description: VirtualMachineIPAddressLeaseStatus defines the observed state
+              of VirtualMachineIPAddressLease
             type: object
         type: object
     served: true

@@ -26,7 +26,7 @@ import (
 
 var _ = Describe("Modules :: virtualization :: hooks :: ipam ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "IPAddressClaim", true)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "VirtualMachineIPAddressLease", true)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "VirtualMachine", true)
 
 	Context("Empty cluster", func() {
@@ -47,7 +47,7 @@ var _ = Describe("Modules :: virtualization :: hooks :: ipam ::", func() {
 			f.BindingContexts.Set(
 				f.KubeStateSet(`
 apiVersion: deckhouse.io/v1alpha1
-kind: IPAddressClaim
+kind: VirtualMachineIPAddressLease
 metadata:
   name: ip-10-10-10-0
   namespace: ns1
@@ -63,7 +63,7 @@ status:
   ipAddress: 10.10.10.10
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: IPAddressClaim
+kind: VirtualMachineIPAddressLease
 metadata:
   name: ip-10-10-10-1
   namespace: ns1
@@ -71,7 +71,7 @@ spec:
   vmName: removed-vm
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: IPAddressClaim
+kind: VirtualMachineIPAddressLease
 metadata:
   name: ip-10-10-10-2
   namespace: ns1
@@ -80,7 +80,7 @@ spec:
   vmName: missing-vm
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: IPAddressClaim
+kind: VirtualMachineIPAddressLease
 metadata:
   name: ip-10-10-10-123
   namespace: ns1
@@ -112,29 +112,29 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Manages IPAddressClaims", func() {
+		It("Manages VirtualMachineIPAddressLeases", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			var claim object_store.KubeObject
 			var vm object_store.KubeObject
 
-			By("Checking existing VM, IPAddressClaim is not static, should be kept")
-			claim = f.KubernetesResource("IPAddressClaim", "ns1", "ip-10-10-10-0")
+			By("Checking existing VM, VirtualMachineIPAddressLease is not static, should be kept")
+			claim = f.KubernetesResource("VirtualMachineIPAddressLease", "ns1", "ip-10-10-10-0")
 			Expect(claim).To(Not(BeEmpty()))
 			Expect(claim.Field(`spec.static`).Bool()).To(BeFalse())
 			Expect(claim.Field(`spec.vmName`).String()).To(Equal("existing-vm"))
 
-			By("Checking VM which was removed, should remove IPAddressClaim as well")
-			claim = f.KubernetesResource("IPAddressClaim", "ns1", "ip-10-10-10-1")
+			By("Checking VM which was removed, should remove VirtualMachineIPAddressLease as well")
+			claim = f.KubernetesResource("VirtualMachineIPAddressLease", "ns1", "ip-10-10-10-1")
 			Expect(claim).To(BeEmpty())
 
-			By("Checking VM which was removed, but IPAddressClaim is static, should be kept")
-			claim = f.KubernetesResource("IPAddressClaim", "ns1", "ip-10-10-10-2")
+			By("Checking VM which was removed, but VirtualMachineIPAddressLease is static, should be kept")
+			claim = f.KubernetesResource("VirtualMachineIPAddressLease", "ns1", "ip-10-10-10-2")
 			Expect(claim).To(Not(BeEmpty()))
 			Expect(claim.Field(`spec.static`).Bool()).To(BeTrue())
 			Expect(claim.Field(`spec.vmName`).String()).To(BeEmpty())
 
 			By("Checking new VM with static IP address assigned, should allocate requested address")
-			claim = f.KubernetesResource("IPAddressClaim", "ns2", "ip-10-10-10-1")
+			claim = f.KubernetesResource("VirtualMachineIPAddressLease", "ns2", "ip-10-10-10-1")
 			Expect(claim).To(Not(BeEmpty()))
 			Expect(claim.Field(`spec.static`).Bool()).To(BeTrue())
 			Expect(claim.Field(`spec.vmName`).String()).To(Equal("vm1"))
@@ -143,7 +143,7 @@ metadata:
 			Expect(vm.Field(`status.ipAddress`).String()).To(Equal("10.10.10.1"))
 
 			By("Checking new VM without static IP address assigned, should allocate a new one")
-			claim = f.KubernetesResource("IPAddressClaim", "ns2", "ip-10-10-10-3")
+			claim = f.KubernetesResource("VirtualMachineIPAddressLease", "ns2", "ip-10-10-10-3")
 			Expect(claim).To(Not(BeEmpty()))
 			Expect(claim.Field(`spec.static`).Bool()).To(BeFalse())
 			Expect(claim.Field(`spec.vmName`).String()).To(Equal("vm2"))
@@ -152,7 +152,7 @@ metadata:
 			Expect(vm.Field(`status.ipAddress`).String()).To(Equal("10.10.10.3"))
 
 			By("Checking new VM without static IP address assigned, should allocate a new one")
-			claim = f.KubernetesResource("IPAddressClaim", "ns2", "ip-10-10-10-4")
+			claim = f.KubernetesResource("VirtualMachineIPAddressLease", "ns2", "ip-10-10-10-4")
 			Expect(claim).To(Not(BeEmpty()))
 			Expect(claim.Field(`spec.static`).Bool()).To(BeFalse())
 			Expect(claim.Field(`spec.vmName`).String()).To(Equal("vm3"))

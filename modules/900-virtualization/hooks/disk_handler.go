@@ -35,9 +35,9 @@ import (
 )
 
 const (
-	diskTypesSnapshot          = "diskHandlerDisktype"
-	disksSnapshot              = "diskHandlerDisk"
-	publicImageSourcesSnapshot = "diskHandlerPublicImageSource"
+	diskTypesSnapshot          = "diskHandlerVirtualMachineDiskClass"
+	disksSnapshot              = "diskHandlerVirtualMachineDisk"
+	publicImageSourcesSnapshot = "diskHandlerClusterVirtualMachineImage"
 	dataVolumeSnapshot         = "diskHandlerDataVolume"
 )
 
@@ -54,20 +54,20 @@ var diskHandlerHookConfig = &go_hook.HookConfig{
 		{
 			Name:       diskTypesSnapshot,
 			ApiVersion: gv,
-			Kind:       "DiskType",
-			FilterFunc: applyDiskTypeFilter,
+			Kind:       "VirtualMachineDiskClass",
+			FilterFunc: applyVirtualMachineDiskClassFilter,
 		},
 		{
 			Name:       disksSnapshot,
 			ApiVersion: gv,
-			Kind:       "Disk",
-			FilterFunc: applyDiskFilter,
+			Kind:       "VirtualMachineDisk",
+			FilterFunc: applyVirtualMachineDiskFilter,
 		},
 		{
 			Name:       publicImageSourcesSnapshot,
 			ApiVersion: gv,
-			Kind:       "PublicImageSource",
-			FilterFunc: applyPublicImageSourceFilter,
+			Kind:       "ClusterVirtualMachineImage",
+			FilterFunc: applyClusterVirtualMachineImageFilter,
 		},
 		{
 			Name:       kubevirtVMsCRDSnapshot,
@@ -81,15 +81,15 @@ var diskHandlerHookConfig = &go_hook.HookConfig{
 	},
 }
 
-var _ = sdk.RegisterFunc(diskHandlerHookConfig, handleDisks)
+var _ = sdk.RegisterFunc(diskHandlerHookConfig, handleVirtualMachineDisks)
 
-type DiskTypeSnapshot struct {
+type VirtualMachineDiskClassSnapshot struct {
 	Name      string
 	Namespace string
-	Spec      v1alpha1.DiskTypeSpec
+	Spec      v1alpha1.VirtualMachineDiskClassSpec
 }
 
-type DiskSnapshot struct {
+type VirtualMachineDiskSnapshot struct {
 	Name      string
 	Namespace string
 	UID       ktypes.UID
@@ -98,7 +98,7 @@ type DiskSnapshot struct {
 	Source    v1alpha1.ImageSourceRef
 }
 
-type PublicImageSourceSnapshot struct {
+type ClusterVirtualMachineImageSnapshot struct {
 	Name      string
 	Namespace string
 	Source    cdiv1.DataVolumeSource
@@ -109,28 +109,28 @@ type DataVolumeSnapshot struct {
 	Namespace string
 }
 
-func applyDiskTypeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	diskType := &v1alpha1.DiskType{}
+func applyVirtualMachineDiskClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	diskType := &v1alpha1.VirtualMachineDiskClass{}
 	err := sdk.FromUnstructured(obj, diskType)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert object to DiskType: %v", err)
+		return nil, fmt.Errorf("cannot convert object to VirtualMachineDiskClass: %v", err)
 	}
 
-	return &DiskTypeSnapshot{
+	return &VirtualMachineDiskClassSnapshot{
 		Name:      diskType.Name,
 		Namespace: diskType.Namespace,
 		Spec:      diskType.Spec,
 	}, nil
 }
 
-func applyDiskFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	disk := &v1alpha1.Disk{}
+func applyVirtualMachineDiskFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	disk := &v1alpha1.VirtualMachineDisk{}
 	err := sdk.FromUnstructured(obj, disk)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert object to Disk: %v", err)
+		return nil, fmt.Errorf("cannot convert object to VirtualMachineDisk: %v", err)
 	}
 
-	return &DiskSnapshot{
+	return &VirtualMachineDiskSnapshot{
 		Name:      disk.Name,
 		Namespace: disk.Namespace,
 		UID:       disk.UID,
@@ -140,14 +140,14 @@ func applyDiskFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	}, nil
 }
 
-func applyPublicImageSourceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	publicImageSource := &v1alpha1.PublicImageSource{}
+func applyClusterVirtualMachineImageFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	publicImageSource := &v1alpha1.ClusterVirtualMachineImage{}
 	err := sdk.FromUnstructured(obj, publicImageSource)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert object to DataVolume: %v", err)
 	}
 
-	return &PublicImageSourceSnapshot{
+	return &ClusterVirtualMachineImageSnapshot{
 		Name:      publicImageSource.Name,
 		Namespace: publicImageSource.Namespace,
 		Source:    publicImageSource.Spec,
@@ -167,11 +167,11 @@ func applyDataVolumeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}, nil
 }
 
-// handleDisks
+// handleVirtualMachineDisks
 //
 // synopsis:
 //   TODO
-func handleDisks(input *go_hook.HookInput) error {
+func handleVirtualMachineDisks(input *go_hook.HookInput) error {
 	// CDI manages it's own CRDs, so we need to wait for them before starting the watch
 	if diskHandlerHookConfig.Kubernetes[0].Kind == "" {
 		if len(input.Snapshots[kubevirtVMIsCRDSnapshot]) > 0 {
@@ -200,13 +200,13 @@ func handleDisks(input *go_hook.HookInput) error {
 	dataVolumeSnap := input.Snapshots[dataVolumeSnapshot]
 
 	if len(diskSnap) == 0 && len(diskTypeSnap) == 0 {
-		input.LogEntry.Warnln("Disk and DiskType not found. Skip")
+		input.LogEntry.Warnln("VirtualMachineDisk and VirtualMachineDiskClass not found. Skip")
 		return nil
 	}
 
 DISK_LOOP:
 	for _, sRaw := range diskSnap {
-		disk := sRaw.(*DiskSnapshot)
+		disk := sRaw.(*VirtualMachineDiskSnapshot)
 		for _, dRaw := range dataVolumeSnap {
 			dataVolume := dRaw.(*DataVolumeSnapshot)
 			if dataVolume.Namespace != disk.Namespace {
@@ -220,17 +220,17 @@ DISK_LOOP:
 		}
 		// DataVolume not found, needs to create a new one
 
-		var diskTypeSpec v1alpha1.DiskTypeSpec
+		var diskTypeSpec v1alpha1.VirtualMachineDiskClassSpec
 		var diskTypeFound bool
 		for _, dRaw := range diskTypeSnap {
-			diskType := dRaw.(*DiskTypeSnapshot)
+			diskType := dRaw.(*VirtualMachineDiskClassSnapshot)
 			if diskType.Name == disk.Type {
 				diskTypeSpec = diskType.Spec
 				diskTypeFound = true
 			}
 		}
 		if !diskTypeFound {
-			input.LogEntry.Warnln("DiskType not found. Skip")
+			input.LogEntry.Warnln("VirtualMachineDiskClass not found. Skip")
 			continue
 		}
 
@@ -239,7 +239,7 @@ DISK_LOOP:
 			var imageSourceFound bool
 			if disk.Source.Scope == v1alpha1.ImageSourceScopePublic || disk.Source.Scope == "" {
 				for _, dRaw := range publicImageSourceSnap {
-					publicImageSource := dRaw.(*PublicImageSourceSnapshot)
+					publicImageSource := dRaw.(*ClusterVirtualMachineImageSnapshot)
 					if publicImageSource.Name == disk.Source.Name {
 						imageSource = publicImageSource.Source
 						imageSourceFound = true
@@ -271,7 +271,7 @@ DISK_LOOP:
 					APIVersion:         gv,
 					BlockOwnerDeletion: pointer.Bool(true),
 					Controller:         pointer.Bool(true),
-					Kind:               "Disk",
+					Kind:               "VirtualMachineDisk",
 					Name:               disk.Name,
 					UID:                disk.UID,
 				}},

@@ -92,7 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	restClient, err := apiutil.RESTClientForGVK(d8v1alpha1.GroupVersion.WithKind("IPAddressClaim"), false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
+	restClient, err := apiutil.RESTClientForGVK(d8v1alpha1.GroupVersion.WithKind("IPAddressLease"), false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
 	if err != nil {
 		logger.Errorf("unable to create REST client: %s", err)
 		os.Exit(1)
@@ -113,7 +113,7 @@ func main() {
 	}
 
 	if err := mgr.Add(controller); err != nil {
-		logger.Errorf("unable to add ipaddressclaims controller to manager %s", err)
+		logger.Errorf("unable to add ipaddressleases controller to manager %s", err)
 		os.Exit(1)
 	}
 

@@ -24,8 +24,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// DiskTypeSpec defines the desired state of DiskType
-type DiskTypeSpec struct {
+// VirtualMachineDiskClassSpec defines the desired state of VirtualMachineDiskClass
+type VirtualMachineDiskClassSpec struct {
 	// accessModes contains the desired access modes the volume should have.
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
 	// +optional
@@ -40,32 +40,33 @@ type DiskTypeSpec struct {
 	VolumeMode *v1.PersistentVolumeMode `json:"volumeMode,omitempty"`
 }
 
-// DiskTypeStatus defines the observed state of DiskType
-type DiskTypeStatus struct {
+// VirtualMachineDiskClassStatus defines the observed state of VirtualMachineDiskClass
+type VirtualMachineDiskClassStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:resource:shortName={"vmdc","vmdiskclass","vmdiskclasses"}
 
-// DiskType is the Schema for the disktypes API
-type DiskType struct {
+// VirtualMachineDiskClass is the Schema for the virtualmachinediskclasses API
+type VirtualMachineDiskClass struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DiskTypeSpec   `json:"spec,omitempty"`
-	Status DiskTypeStatus `json:"status,omitempty"`
+	Spec   VirtualMachineDiskClassSpec   `json:"spec,omitempty"`
+	Status VirtualMachineDiskClassStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// DiskTypeList contains a list of DiskType
-type DiskTypeList struct {
+// VirtualMachineDiskClassList contains a list of VirtualMachineDiskClass
+type VirtualMachineDiskClassList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DiskType `json:"items"`
+	Items           []VirtualMachineDiskClass `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&DiskType{}, &DiskTypeList{})
+	SchemeBuilder.Register(&VirtualMachineDiskClass{}, &VirtualMachineDiskClassList{})
 }

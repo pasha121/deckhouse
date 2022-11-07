@@ -59,8 +59,8 @@ var vmHandlerHookConfig = &go_hook.HookConfig{
 		{
 			Name:       diskNamesSnapshot,
 			ApiVersion: gv,
-			Kind:       "Disk",
-			FilterFunc: applyDiskNamesFilter,
+			Kind:       "VirtualMachineDisk",
+			FilterFunc: applyVirtualMachineDiskNamesFilter,
 		},
 		{
 			Name:       kubevirtVMsCRDSnapshot,
@@ -101,14 +101,14 @@ func applyDeckhouseVMFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	return vm, nil
 }
 
-func applyDiskNamesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	disk := &v1alpha1.Disk{}
+func applyVirtualMachineDiskNamesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	disk := &v1alpha1.VirtualMachineDisk{}
 	err := sdk.FromUnstructured(obj, disk)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert object to Disk: %v", err)
+		return nil, fmt.Errorf("cannot convert object to VirtualMachineDisk: %v", err)
 	}
 
-	return &DiskSnapshot{
+	return &VirtualMachineDiskSnapshot{
 		Name:      disk.Name,
 		Namespace: disk.Namespace,
 	}, nil
@@ -185,38 +185,38 @@ VM_LOOP:
 
 		// KubeVirt VirtualMachine not found, needs to create a new one
 
-		var bootDiskName string
+		var bootVirtualMachineDiskName string
 		if d8vm.Spec.BootDisk.Disk != (v1alpha1.DiskSource{}) {
-			bootDiskName = d8vm.Spec.BootDisk.Disk.Name
+			bootVirtualMachineDiskName = d8vm.Spec.BootDisk.Disk.Name
 		}
 
 		if d8vm.Spec.BootDisk.Image != (v1alpha1.ImageSource{}) {
-			if bootDiskName != "" {
-				input.LogEntry.Errorln("Disk source can't be specified with image source for bootDisk")
+			if bootVirtualMachineDiskName != "" {
+				input.LogEntry.Errorln("VirtualMachineDisk source can't be specified with image source for bootVirtualMachineDisk")
 				continue
 			}
-			bootDiskName = d8vm.Name + "-boot"
-			if bootDiskName != "" {
-				bootDiskFound := false
+			bootVirtualMachineDiskName = d8vm.Name + "-boot"
+			if bootVirtualMachineDiskName != "" {
+				bootVirtualMachineDiskFound := false
 				for _, dRaw := range diskNameSnap {
-					disk := dRaw.(*DiskSnapshot)
+					disk := dRaw.(*VirtualMachineDiskSnapshot)
 					if disk.Namespace != d8vm.Namespace {
 						continue
 					}
-					if disk.Name != bootDiskName {
+					if disk.Name != bootVirtualMachineDiskName {
 						continue
 					}
-					bootDiskFound = true
+					bootVirtualMachineDiskFound = true
 				}
-				if !bootDiskFound {
-					// Create a new Disk
-					disk := &v1alpha1.Disk{
+				if !bootVirtualMachineDiskFound {
+					// Create a new VirtualMachineDisk
+					disk := &v1alpha1.VirtualMachineDisk{
 						TypeMeta: metav1.TypeMeta{
-							Kind:       "Disk",
+							Kind:       "VirtualMachineDisk",
 							APIVersion: gv,
 						},
 						ObjectMeta: v1.ObjectMeta{
-							Name:      bootDiskName,
+							Name:      bootVirtualMachineDiskName,
 							Namespace: d8vm.Namespace,
 							OwnerReferences: []v1.OwnerReference{{
 								APIVersion:         gv,
@@ -227,7 +227,7 @@ VM_LOOP:
 								UID:                d8vm.UID,
 							}},
 						},
-						Spec: v1alpha1.DiskSpec{
+						Spec: v1alpha1.VirtualMachineDiskSpec{
 							Type: d8vm.Spec.BootDisk.Image.Type,
 							Size: d8vm.Spec.BootDisk.Image.Size,
 							Source: v1alpha1.ImageSourceRef{

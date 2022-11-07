@@ -21,32 +21,33 @@ import (
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
 
-// PublicImageSourceStatus defines the observed state of PublicImageSource
-type PublicImageSourceStatus struct {
+// ClusterVirtualMachineImageStatus defines the observed state of ClusterVirtualMachineImage
+type ClusterVirtualMachineImageStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:resource:shortName={"cvmi","cvmimage","cvmimages"}
 
-// PublicImageSource is the Schema for the publicimagesources API
-type PublicImageSource struct {
+// ClusterVirtualMachineImage is the Schema for the clustervirtualmachineimages API
+type ClusterVirtualMachineImage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   cdiv1.DataVolumeSource  `json:"spec,omitempty"`
-	Status PublicImageSourceStatus `json:"status,omitempty"`
+	Spec   cdiv1.DataVolumeSource           `json:"spec,omitempty"`
+	Status ClusterVirtualMachineImageStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// PublicImageSourceList contains a list of PublicImageSource
-type PublicImageSourceList struct {
+// ClusterVirtualMachineImageList contains a list of ClusterVirtualMachineImage
+type ClusterVirtualMachineImageList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []PublicImageSource `json:"items"`
+	Items           []ClusterVirtualMachineImage `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&PublicImageSource{}, &PublicImageSourceList{})
+	SchemeBuilder.Register(&ClusterVirtualMachineImage{}, &ClusterVirtualMachineImageList{})
 }
