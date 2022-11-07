@@ -102,6 +102,7 @@ type DiskSource struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:shortName={"vm","vms"}
 
 // VirtualMachine is the Schema for the virtualmachines API
 type VirtualMachine struct {
