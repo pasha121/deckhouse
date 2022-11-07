@@ -55,7 +55,8 @@ jobs:
               return core.setOutput('trigger_for_changelog', 'true');
             }
 
-            if (isPR) {
+            // only one for abort
+            if (isPR && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
               core.notice(`Comment on pull request.`);
               return core.setOutput('trigger_for_pull_request', 'true');
             }
