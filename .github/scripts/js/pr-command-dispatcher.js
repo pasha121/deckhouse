@@ -22,6 +22,8 @@ async function runSlashCommandForPullRequest({ github, context, core }) {
     return core.info(`Ignore comment: ${arg.err}.`);
   }
 
+  core.debug(`Have context before dispatch: '${JSON.stringify(context)}'`)
+
   let slashCommand = dispatchPullRequestCommand({arg, core, context});
   if (!slashCommand) {
     return core.info(`Ignore comment: workflow for command ${argv[0]} not found.`);
