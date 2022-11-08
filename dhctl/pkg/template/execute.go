@@ -42,7 +42,7 @@ type RenderedTemplate struct {
 func RenderTemplatesDir(templatesDir string, data map[string]interface{}) ([]RenderedTemplate, error) {
 	files, err := ioutil.ReadDir(templatesDir)
 	if os.IsNotExist(err) {
-		log.InfoF("Templates directory %q does not exist. Skipping...\n", templatesDir)
+		log.InfoF("Templates directory %q isn't exist. Skipping...\n", templatesDir)
 		return nil, nil
 	}
 
