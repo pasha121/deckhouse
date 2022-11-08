@@ -1010,7 +1010,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
         }
       });
     } catch (error) {
-      core.info(`Github API call error: ${dumpError(error)}`);
+      core.info(`Github API call error: ${dumpError(error)}; (${JSON.stringify(error)})`);
     } finally {
       core.endGroup();
     }
