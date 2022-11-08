@@ -1,5 +1,4 @@
 const {abortFailedE2eCommand} = require("../constants");
-const ci = require('../ci');
 const fs = require('fs');
 
 /**
@@ -28,21 +27,13 @@ function buildFailedE2eTestAdditionalInfo({ needsContext, core, context }){
         const connectStr = outputs['ssh_master_connection_string'] || ''
         const ranFor = outputs['ran_for'] || ''
         const runId = outputs['run_id'] || ''
-        const issueNumber = outputs['issue_number'] || ''
-        const artifactName = outputs['state_artifact_name'] || ''
         const clusterPrefix = needsContext[key].outputs['cluster_prefix'] || ''
-        const ci_commit_ref_name = needsContext[key].outputs['ci_commit_ref_name'] || ''
-        const pull_request_ref = needsContext[key].outputs['pull_request_ref'] || ''
 
         const argv = [
           abortFailedE2eCommand,
-          ci_commit_ref_name,
-          pull_request_ref,
           ranFor,
           runId,
-          artifactName,
           clusterPrefix,
-          issueNumber,
         ]
 
         core.debug(`result argv: ${JSON.stringify(argv)}`)

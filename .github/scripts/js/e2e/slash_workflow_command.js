@@ -1,5 +1,5 @@
 const {abortFailedE2eCommand, knownLabels, knownProviders} = require("../constants");
-const {parseCommandArgumentAsRef} = require("../ci");
+const {parseCommandArgumentAsRef, pullRequestInfo} = require("../ci");
 
 /**
  * Build valid return object
@@ -33,70 +33,53 @@ function tryParseAbortE2eCluster({argv, context, core, github}){
     return null;
   }
 
-  if (argv.length !== 8) {
-    let err = 'clean failed e2e cluster should have 6 arguments'
-    switch (argv.length){
-      case 7:
-        err = 'comment id for starting e2e is required';
-        break;
-      case 6:
-        err = 'cluster_prefix and comment id for starting e2e are required';
-        break;
-      case 5:
-        err = 'artifact name and cluster_prefix and comment id for starting e2e are required';
-        break;
-      case 4:
-        err = 'run id, artifact name and cluster_prefix and comment id for starting e2e are required';
-        break;
-      case 3:
-        err = 'ran for (provider, layout, cri, k8s version), run id, artifact name and cluster_prefix and comment id for starting e2e are required';
-        break;
-      case 2:
-        err = 'pull_request_ref, ran for (provider, layout, cri, k8s version), run id, artifact name, and cluster_prefix and comment id for starting e2e are required';
-        break;
-      case 1:
-        err = 'ci_commit_ref_name, pull_request_ref, ran for (provider, layout, cri, k8s version), run id, artifact name, and cluster_prefix and comment id for starting e2e are required';
-        break;
-    }
-    return {err};
+  // example
+  // /e2e/abort static;Static;containerd;1.21 3318607912 3318607912-1-con-1-21
+  // explain:
+  // /e2e/abort - command
+  // static;Static;containerd;1.21 - run parameters (provider;layout;cri;k8s version)
+  // 3318607912 - run id (needs for get artifact)
+  // 3318607912-1-con-1-21 - cluster prefix (needs for run dhctl bootstrap-phase abort command)
+  if (argv.length !== 4) {
+    return {err: 'clean failed e2e cluster should have 4 arguments'};
   }
 
-  const ranForSplit = argv[3].split(';').map(v => v.trim()).filter(v => !!v);
+  const ranForSplit = argv[1].split(';').map(v => v.trim()).filter(v => !!v);
   if (ranForSplit.length !== 4) {
-    let err = '"ran for" argument should have 4 parts';
-    switch (ranForSplit.length) {
-      case 3:
-        err = 'k8s version is required';
-        break;
-      case 2:
-        err = 'cri and k8s version are required';
-        break;
-      case 1:
-        err = 'layout, cri and k8s version are required';
-        break;
-      case 0:
-        err = 'provider, layout, cri and k8s version are required';
-        break;
-    }
-
-    return {err};
+    return {err: '"ran parameters" argument should split on 4 parts'};
   }
+
+  const run_id = argv[2];
+  const cluster_prefix = argv[3];
+
+  const prNumber = context.payload.pull_request.number;
+  const {ci_commit_ref_name, pull_request_ref} = pullRequestInfo({context, prNumber});
+
+  core.debug(`pull request info: ${JSON.stringify({prNumber, ci_commit_ref_name, pull_request_ref})}`);
 
   const provider = ranForSplit[0];
+  const layout = ranForSplit[1];
+  const cri = ranForSplit[2];
+  const k8s_version = ranForSplit[3];
+  const k8sSlug = k8s_version.replace('.', '_');
+  const state_artifact_name = `failed_cluster_state_${provider}_${cri}_${k8sSlug}`;
 
-  return buildReturn('isDestroyFailedE2e', `e2e-clean-${provider}.yml`,'refs/heads/main', {
-      ci_commit_ref_name: argv[1],
-      pull_request_ref: argv[2],
-      run_id: argv[4],
-      state_artifact_name: argv[5],
-      cluster_prefix: argv[6],
+  const inputs = {
+    ci_commit_ref_name,
+    pull_request_ref,
+    run_id,
+    state_artifact_name,
+    cluster_prefix,
 
-      layout: ranForSplit[1],
-      cri: ranForSplit[2],
-      k8s_version: ranForSplit[3],
-      issue_number: argv[7],
-    },
-  )
+    layout,
+    cri,
+    k8s_version,
+    issue_number: prNumber,
+  };
+
+  core.debug(`e2e abort inputs: ${JSON.stringify(inputs)}`)
+
+  return buildReturn('isDestroyFailedE2e', `e2e-clean-${provider}.yml`,'refs/heads/main', inputs)
 }
 
 

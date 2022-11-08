@@ -1,7 +1,7 @@
 //@ts-check
 
 const skipE2eLabel = 'skip/e2e';
-const abortFailedE2eCommand = '/e2e/failed/abort';
+const abortFailedE2eCommand = '/e2e/abort';
 module.exports.skipE2eLabel = skipE2eLabel;
 module.exports.abortFailedE2eCommand = abortFailedE2eCommand;
 
