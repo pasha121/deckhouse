@@ -60,7 +60,7 @@ jobs:
             if (isPR && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || authorAssociation === 'CONTRIBUTOR' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
               core.notice(`Comment on pull request.`);
               core.setOutput('trigger_for_pull_request', 'true');
-              return core.setOutput('issue', JSON.stringify(context.payload.issue));
+              return core.setOutput('issue_context', JSON.stringify(context.payload.issue));
             }
 
   trigger_for_release_issue:
@@ -105,11 +105,11 @@ jobs:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
             core.debug(`Issue context from env: ${process.env.ISSUE_CONTEXT}`);
-            core.debug(`Issue context: ${JSON.stringify(context.payload.issue})`);
+            core.debug(`Issue context: ${JSON.stringify(context.payload.issue)}`);
             const issue = context.payload.issue
             context.payload.issue = {
+              ...JSON.parse(process.env.ISSUE_CONTEXT),
               ...issue,
-              ..JSON.parse(process.env.ISSUE_CONTEXT),
             }
             const ci = require('./.github/scripts/js/pr-command-dispatcher');
             return await ci.runSlashCommandForPullRequest({github, context, core});
