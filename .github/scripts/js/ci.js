@@ -974,7 +974,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
     const workflow_id = command.workflows[0];
     core.notice(`Run workflow '${JSON.stringify(command.workflows)}' for label '${label}'`);
     core.startGroup(`Trigger workflow_dispatch event ...`);
-    try {
+//    try {
       // Add a comment to pull request. https://docs.github.com/en/rest/issues/comments#create-an-issue-comment
       core.info(`Commenting on PR#${prNumber} ...`);
       const response = await github.rest.issues.createComment({
@@ -994,10 +994,10 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
         comment_id: '' + response.data.id
       };
 
-      const prInfo = pullRequestInfo({context, prNumber})
+      const prInfo = pullRequestInfo({context, prNumber});
 
-      core.debug(`Pull request info: ${JSON.stringify(prInfo)}`)
-
+      core.debug(`Pull request info: ${JSON.stringify(prInfo)}`);
+    try{
       await startWorkflow({
         github,
         context,
