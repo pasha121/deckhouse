@@ -662,7 +662,10 @@ const detectSlashCommand = ({ comment , context, core}) => {
       return {notFoundMsg: cmd.err}
     }
 
-    return cmd
+    return {
+      isE2E: true,
+      ...cmd
+    }
   }
 
   // A ref for workflow and a target ref for e2e release update test.
@@ -716,7 +719,6 @@ const detectSlashCommand = ({ comment , context, core}) => {
     inputs,
     isSuspend,
     isDeploy,
-    isE2E,
     isBuild,
   };
 };
@@ -841,7 +843,7 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
 // Triggering workflow_dispatch requires a ref to checkout workflows.
 // We use refs/heads/main for workflows and pass refs/pulls/head/NUM in
 // pull_request_ref field to checkout PR content.
-function pullRequestInfo({context, prNumber}){
+function pullRequestInfo({context, prNumber, ref}){
   const targetRepo = context.payload.repository.full_name;
   const prRepo = context.payload.pull_request.head.repo.full_name;
   const prRef = context.payload.pull_request.head.ref;
@@ -994,7 +996,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
         comment_id: '' + response.data.id
       };
 
-      const prInfo = pullRequestInfo({context, prNumber});
+      const prInfo = pullRequestInfo({context, prNumber, ref});
 
       core.debug(`Pull request info: ${JSON.stringify(prInfo)}`);
     try{

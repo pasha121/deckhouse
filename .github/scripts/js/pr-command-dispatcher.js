@@ -93,8 +93,13 @@ function dispatchPullRequestCommand({arg, core, context}){
     tryParseAbortE2eCluster
   ]
 
+  const prNumber = context.payload.pull_request.number;
+  // Construct head commit ref using pr number.
+  const ref = `refs/pull/${ prNumber }/head`;
+  core.notice(`Use ref: '${ref}'`)
+
   for (let i = 0; i < checks.length; i++) {
-    const res = checks[i]({argv, lines, core, context})
+    const res = checks[i]({argv, lines, core, context, ref})
     if (res !== null) {
       return res;
     }

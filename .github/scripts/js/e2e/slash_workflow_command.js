@@ -27,7 +27,7 @@ function buildReturn(flag, workflow_id, targetRef, inputs) {
  * @param {string} inputs.argv - array of slash command argv[0] is commnad
  * @return {object}
  */
-function tryParseAbortE2eCluster({argv, context, core, github}){
+function tryParseAbortE2eCluster({argv, context, core, github, ref}){
   const command = argv[0];
   if (command !== abortFailedE2eCommand) {
     return null;
@@ -53,7 +53,7 @@ function tryParseAbortE2eCluster({argv, context, core, github}){
   const cluster_prefix = argv[3];
 
   const prNumber = context.payload.pull_request.number;
-  const {ci_commit_ref_name, pull_request_ref} = pullRequestInfo({context, prNumber});
+  const {ci_commit_ref_name, pull_request_ref} = pullRequestInfo({context, prNumber, ref});
 
   core.debug(`pull request info: ${JSON.stringify({prNumber, ci_commit_ref_name, pull_request_ref})}`);
 
@@ -90,8 +90,9 @@ function tryParseAbortE2eCluster({argv, context, core, github}){
  * @param {object} inputs.github - A pre-authenticated octokit/rest.js client with pagination plugins.
  * @param {object} inputs.context - A reference to context https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts#L6
  * @param {string} inputs.argv - array of slash command argv[0] is commnad
+ * @param {string} inputs.ref - reference for checkout
  */
-function tryParseRunE2e({argv, context, core, github}){
+function tryParseRunE2e({argv, context, core, github, ref}){
   const command = argv[0];
   // Detect /e2e/run/* commands and /e2e/use/* arguments.
   const isE2E = Object.entries(knownLabels)
