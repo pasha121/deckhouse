@@ -52,7 +52,7 @@ jobs:
             }
 
             // only one for abort
-            if (isPR && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || (isPrivate && (authorAssociation === 'COLLABORATOR' || authorAssociation === 'CONTRIBUTOR')))) {
+            if (isPR && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || || authorAssociation === 'CONTRIBUTOR' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
               core.notice(`Comment on pull request.`);
               return core.setOutput('trigger_for_pull_request', 'true');
             }
