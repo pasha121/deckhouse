@@ -93,6 +93,8 @@ function dispatchPullRequestCommand({arg, core, context}){
     tryParseAbortE2eCluster
   ]
 
+  core.debug(`Have context in dispatch: '${JSON.stringify(context)}'`)
+
   const prNumber = context.payload.pull_request.number;
   // Construct head commit ref using pr number.
   const ref = `refs/pull/${ prNumber }/head`;

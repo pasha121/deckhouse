@@ -15,6 +15,7 @@ jobs:
       trigger_for_release_issue: ${{steps.check.outputs.trigger_for_release_issue}}
       trigger_for_changelog: ${{steps.check.outputs.trigger_for_changelog}}
       trigger_for_pull_request: ${{steps.check.outputs.trigger_for_pull_request}}
+      issue_context: ${{steps.check.outputs.issue}}
     steps:
       - name: Check conditions for release issue
         id: check
@@ -58,7 +59,8 @@ jobs:
             // only one for abort
             if (isPR && (authorAssociation === 'OWNER' || authorAssociation === 'MEMBER' || authorAssociation === 'CONTRIBUTOR' || (isPrivate && authorAssociation === 'COLLABORATOR'))) {
               core.notice(`Comment on pull request.`);
-              return core.setOutput('trigger_for_pull_request', 'true');
+              core.setOutput('trigger_for_pull_request', 'true');
+              return core.setOutput('issue', JSON.stringify(context.payload.issue));
             }
 
   trigger_for_release_issue:
@@ -97,9 +99,18 @@ jobs:
       # </template: checkout_step>
       - name: Run workflow
         uses: actions/github-script@v5.0.0
+        env:
+          ISSUE_CONTEXT: ${{needs.conditions.outputs.issue_context}}
         with:
           github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           script: |
+            core.debug(`Issue context from env: ${process.env.ISSUE_CONTEXT}`);
+            core.debug(`Issue context: ${JSON.stringify(context.payload.issue})`);
+            const issue = context.payload.issue
+            context.payload.issue = {
+              ...issue,
+              ..JSON.parse(process.env.ISSUE_CONTEXT),
+            }
             const ci = require('./.github/scripts/js/pr-command-dispatcher');
             return await ci.runSlashCommandForPullRequest({github, context, core});
 
