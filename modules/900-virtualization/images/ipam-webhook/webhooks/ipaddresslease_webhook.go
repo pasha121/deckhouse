@@ -31,7 +31,7 @@ func (v *IPAMValidatorWebhook) Start() {
 	// Create our validator
 	mcfg := kwhvalidating.WebhookConfig{
 		ID:        "ipamValidator",
-		Obj:       &d8v1alpha1.IPAddressLease{},
+		Obj:       &d8v1alpha1.VirtualMachineIPAddressLease{},
 		Validator: v,
 		Logger:    v.Logger,
 	}
@@ -57,8 +57,8 @@ func (v *IPAMValidatorWebhook) Start() {
 }
 
 func (v *IPAMValidatorWebhook) Validate(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-	if _, ok := obj.(*d8v1alpha1.IPAddressLease); !ok {
-		return nil, fmt.Errorf("not an IPAddressLease")
+	if _, ok := obj.(*d8v1alpha1.VirtualMachineIPAddressLease); !ok {
+		return nil, fmt.Errorf("not an VirtualMachineIPAddressLease")
 	}
 	ip := utils.NameToIP(obj.GetName())
 	if net.ParseIP(ip) == nil {
@@ -90,7 +90,7 @@ func (v *IPAMValidatorWebhook) GetHTTPHandler() (http.Handler, error) {
 	var whHandler http.Handler
 	mcfg := kwhvalidating.WebhookConfig{
 		ID:        "ipamValidator",
-		Obj:       &d8v1alpha1.IPAddressLease{},
+		Obj:       &d8v1alpha1.VirtualMachineIPAddressLease{},
 		Validator: v,
 		Logger:    v.Logger,
 	}

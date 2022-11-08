@@ -92,7 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	restClient, err := apiutil.RESTClientForGVK(d8v1alpha1.GroupVersion.WithKind("IPAddressLease"), false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
+	restClient, err := apiutil.RESTClientForGVK(d8v1alpha1.GroupVersion.WithKind("VirtualMachineIPAddressLease"), false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
 	if err != nil {
 		logger.Errorf("unable to create REST client: %s", err)
 		os.Exit(1)

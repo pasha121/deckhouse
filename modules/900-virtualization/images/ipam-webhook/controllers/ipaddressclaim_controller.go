@@ -45,10 +45,10 @@ func (c IPAMValidatorController) Start(ctx context.Context) error {
 	c.Logger.Infof("starting ipaddressleases controller")
 
 	lw := cache.NewListWatchFromClient(c.RESTClient, "ipaddressleases", v1.NamespaceAll, fields.Everything())
-	informer := cache.NewSharedIndexInformer(lw, &d8v1alpha1.IPAddressLease{}, 12*time.Hour,
+	informer := cache.NewSharedIndexInformer(lw, &d8v1alpha1.VirtualMachineIPAddressLease{}, 12*time.Hour,
 		cache.Indexers{
 			"namespace_name": func(obj interface{}) ([]string, error) {
-				return []string{obj.(*d8v1alpha1.IPAddressLease).GetName()}, nil
+				return []string{obj.(*d8v1alpha1.VirtualMachineIPAddressLease).GetName()}, nil
 			},
 		},
 	)
@@ -81,9 +81,9 @@ func (c IPAMValidatorController) Start(ctx context.Context) error {
 }
 
 func (c *IPAMValidatorController) addFunc(obj interface{}) {
-	claim, ok := obj.(*d8v1alpha1.IPAddressLease)
+	claim, ok := obj.(*d8v1alpha1.VirtualMachineIPAddressLease)
 	if !ok {
-		// object is not IPAddressLease
+		// object is not VirtualMachineIPAddressLease
 		return
 	}
 	ip := utils.NameToIP(claim.GetName())
@@ -96,9 +96,9 @@ func (c *IPAMValidatorController) addFunc(obj interface{}) {
 }
 
 func (c *IPAMValidatorController) deleteFunc(obj interface{}) {
-	claim, ok := obj.(*d8v1alpha1.IPAddressLease)
+	claim, ok := obj.(*d8v1alpha1.VirtualMachineIPAddressLease)
 	if !ok {
-		// object is not IPAddressLease
+		// object is not VirtualMachineIPAddressLease
 		return
 	}
 	ip := utils.NameToIP(claim.GetName())
