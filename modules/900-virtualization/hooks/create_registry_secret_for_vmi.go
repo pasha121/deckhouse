@@ -78,7 +78,7 @@ var createRegistrySecretForVMIHookConfig = &go_hook.HookConfig{
 			FilterFunc: applyRegistrySecretFilter,
 		},
 		{
-			Name:       kubevirtVMsCRDSnapshot,
+			Name:       kubevirtVMIsCRDSnapshot,
 			ApiVersion: "apiextensions.k8s.io/v1",
 			Kind:       "CustomResourceDefinition",
 			NameSelector: &types.NameSelector{

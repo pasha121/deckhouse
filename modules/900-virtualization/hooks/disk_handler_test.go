@@ -26,7 +26,6 @@ import (
 var _ = Describe("Modules :: virtualization :: hooks :: disk_handler ::", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "VirtualMachineDisk", true)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "VirtualMachineDiskClass", true)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ClusterVirtualMachineImage", true)
 	f.RegisterCRD("cdi.kubevirt.io", "v1beta1", "DataVolume", true)
 
@@ -57,17 +56,27 @@ kind: ClusterVirtualMachineImage
 metadata:
   name: centos-7
 spec:
-  registry:
-    url: "docker://dev-registry.deckhouse.io/sys/deckhouse-oss:8ebc42b654b8e98d9de0f061087cc3b7b3f341ea62374382ece804fb-1658984394800"
+  remote:
+    registry:
+      url: "docker://dev-registry.deckhouse.io/sys/deckhouse-oss:8ebc42b654b8e98d9de0f061087cc3b7b3f341ea62374382ece804fb-1658984394800"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: VirtualMachineDiskClass
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
 metadata:
-  name: linstor-slow
-spec:
-  accessModes: [ "ReadWriteMany" ]
-  volumeMode: Block
-  storageClassName: linstor-data-r2
+  name: linstor-thindata-r2
+parameters:
+  linstor.csi.linbit.com/placementCount: "2"
+  linstor.csi.linbit.com/storagePool: thindata
+  virtualization.deckhouse.io/accessModes: "ReadWriteMany"
+  virtualization.deckhouse.io/volumeMode: "Block"
+  property.linstor.csi.linbit.com/DrbdOptions/Net/rr-conflict: retry-connect
+  property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible: suspend-io
+  property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated: force-secondary
+  property.linstor.csi.linbit.com/DrbdOptions/auto-quorum: suspend-io
+provisioner: linstor.csi.linbit.com
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: VirtualMachineDisk
@@ -76,9 +85,9 @@ metadata:
   namespace: ns1
 spec:
   source:
+    kind: ClusterVirtualMachineImage
     name: centos-7
-    scope: public
-  type: linstor-slow
+  storageClassName: linstor-thindata-r2
   size: 10Gi
 `),
 			)
@@ -88,13 +97,13 @@ spec:
 		It("Creates DataVolume out of VirtualMachineDisk", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			By("Checking existing VM, IPAddressClaim is not static, should be kept")
-			dataVolume := f.KubernetesResource("DataVolume", "ns1", "mydata")
+			dataVolume := f.KubernetesResource("DataVolume", "ns1", "disk-mydata")
 			Expect(dataVolume).To(Not(BeEmpty()))
 			Expect(dataVolume.Field(`spec.source.registry.url`).String()).To(Equal("docker://dev-registry.deckhouse.io/sys/deckhouse-oss:8ebc42b654b8e98d9de0f061087cc3b7b3f341ea62374382ece804fb-1658984394800"))
 			Expect(dataVolume.Field(`spec.pvc.resources.requests.storage`).String()).To(Equal("10Gi"))
-			Expect(dataVolume.Field(`spec.pvc.storageClassName`).String()).To(Equal("linstor-data-r2"))
+			Expect(dataVolume.Field(`spec.pvc.storageClassName`).String()).To(Equal("linstor-thindata-r2"))
 			Expect(dataVolume.Field(`spec.pvc.volumeMode`).String()).To(Equal("Block"))
-			// TODO: dataVolume.Field(`spec.pvc.accessModes`)
+			Expect(dataVolume.Field(`spec.pvc.accessModes`).String()).To(Equal("[\"ReadWriteMany\"]"))
 		})
 	})
 

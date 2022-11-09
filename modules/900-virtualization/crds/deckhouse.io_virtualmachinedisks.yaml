@@ -44,27 +44,30 @@ spec:
                 anyOf:
                 - type: integer
                 - type: string
-                description: Type represents the size for newly created disk
                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                 x-kubernetes-int-or-string: true
               source:
-                description: Type represents the size for newly created disk
+                description: TypedLocalObjectReference contains enough information
+                  to let you locate the typed referenced object inside the same namespace.
                 properties:
-                  name:
-                    description: Name represents the name of the Image
+                  apiGroup:
+                    description: APIGroup is the group for the resource being referenced.
+                      If APIGroup is not specified, the specified Kind must be in
+                      the core API group. For any other third-party types, APIGroup
+                      is required.
                     type: string
-                  scope:
-                    description: 'Scope represents the source of Image supported values:
-                      global, private'
+                  kind:
+                    description: Kind is the type of resource being referenced
+                    type: string
+                  name:
+                    description: Name is the name of resource being referenced
                     type: string
                 required:
+                - kind
                 - name
                 type: object
-              type:
-                description: Type represents the type for newly created disk
+              storageClassName:
                 type: string
-            required:
-            - size
             type: object
           status:
             description: VirtualMachineDiskStatus defines the observed state of VirtualMachineDisk

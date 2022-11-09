@@ -17,9 +17,21 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
+
+// VirtualMachineDiskSpec defines the desired state of VirtualMachineDisk
+type ClusterVirtualMachineImageSpec struct {
+	Remote *cdiv1.DataVolumeSource `json:"remote,omitempty"`
+	Source *TypedObjectReference   `json:"source,omitempty"`
+}
+
+type TypedObjectReference struct {
+	corev1.TypedLocalObjectReference `json:",inline"`
+	Namespace                        string `json:"namespace,omitempty" protobuf:"bytes,3,opt,name=namespace"`
+}
 
 // ClusterVirtualMachineImageStatus defines the observed state of ClusterVirtualMachineImage
 type ClusterVirtualMachineImageStatus struct {
@@ -35,7 +47,7 @@ type ClusterVirtualMachineImage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   cdiv1.DataVolumeSource           `json:"spec,omitempty"`
+	Spec   ClusterVirtualMachineImageSpec   `json:"spec,omitempty"`
 	Status ClusterVirtualMachineImageStatus `json:"status,omitempty"`
 }
 

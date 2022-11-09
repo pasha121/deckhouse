@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,20 +27,9 @@ import (
 
 // VirtualMachineDiskSpec defines the desired state of VirtualMachineDisk
 type VirtualMachineDiskSpec struct {
-	// Type represents the type for newly created disk
-	Type string `json:"type,omitempty"`
-	// Type represents the size for newly created disk
-	Size resource.Quantity `json:"size"`
-	// Type represents the size for newly created disk
-	Source ImageSourceRef `json:"source,omitempty"`
-}
-
-type ImageSourceRef struct {
-	// Name represents the name of the Image
-	Name string `json:"name"`
-	// Scope represents the source of Image
-	// supported values: global, private
-	Scope ImageSourceScope `json:"scope,omitempty"`
+	StorageClassName *string                           `json:"storageClassName,omitempty"`
+	Size             *resource.Quantity                `json:"size,omitempty"`
+	Source           *corev1.TypedLocalObjectReference `json:"source,omitempty"`
 }
 
 // VirtualMachineDiskStatus defines the observed state of VirtualMachineDisk
