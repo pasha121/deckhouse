@@ -555,6 +555,8 @@ func newKubernetesStorageClass(sp *lclient.StoragePool, r int) storagev1.Storage
 		Parameters: map[string]string{
 			"linstor.csi.linbit.com/storagePool":                                                 sp.StoragePoolName,
 			"linstor.csi.linbit.com/placementCount":                                              fmt.Sprintf("%d", r),
+			"virtualization.deckhouse.io/accessModes":                                            "ReadWriteMany",
+			"virtualization.deckhouse.io/volumeMode":                                             "Block",
 			"property.linstor.csi.linbit.com/DrbdOptions/auto-quorum":                            "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-no-data-accessible":         "suspend-io",
 			"property.linstor.csi.linbit.com/DrbdOptions/Resource/on-suspended-primary-outdated": "force-secondary",
