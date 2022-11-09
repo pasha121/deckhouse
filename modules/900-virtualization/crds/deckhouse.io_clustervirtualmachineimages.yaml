@@ -12,8 +12,12 @@ spec:
     kind: ClusterVirtualMachineImage
     listKind: ClusterVirtualMachineImageList
     plural: clustervirtualmachineimages
+    shortNames:
+    - cvmi
+    - cvmimage
+    - cvmimages
     singular: clustervirtualmachineimage
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:

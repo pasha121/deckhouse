@@ -12,6 +12,9 @@ spec:
     kind: VirtualMachineIPAddressLease
     listKind: VirtualMachineIPAddressLeaseList
     plural: virtualmachineipaddressleases
+    shortNames:
+    - vmip
+    - vmips
     singular: virtualmachineipaddresslease
   scope: Namespaced
   versions:

@@ -12,8 +12,12 @@ spec:
     kind: VirtualMachineDiskClass
     listKind: VirtualMachineDiskClassList
     plural: virtualmachinediskclasses
+    shortNames:
+    - vmdc
+    - vmdiskclass
+    - vmdiskclasses
     singular: virtualmachinediskclass
-  scope: Cluster
+  scope: Namespaced
   versions:
   - name: v1alpha1
     schema:

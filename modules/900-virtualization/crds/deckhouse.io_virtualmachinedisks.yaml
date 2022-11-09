@@ -12,6 +12,10 @@ spec:
     kind: VirtualMachineDisk
     listKind: VirtualMachineDiskList
     plural: virtualmachinedisks
+    shortNames:
+    - vmd
+    - vmdisk
+    - vmdisks
     singular: virtualmachinedisk
   scope: Namespaced
   versions:
