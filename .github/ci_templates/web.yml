@@ -136,9 +136,11 @@ steps:
 {!{- $webEnv := printf "web-%s" $env -}!}
 {!{- $ns := printf "deckhouse-web-%s" $env -}!}
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
+{!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- if eq $env "production" -}!}
   {!{- $url = "deckhouse.io" -}!}
+  {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
 {!{- end -}!}
 
@@ -156,6 +158,7 @@ steps:
     WERF_NAMESPACE: {!{ $ns }!}
     WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
     WERF_SET_URL: "global.url={!{ $url }!}"
+    WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
 # </template: deploy_doc_template>
 {!{- end -}!}
@@ -165,9 +168,11 @@ steps:
 {!{- $webEnv := printf "web-%s" $env -}!}
 {!{- $ns := printf "deckhouse-web-%s" $env -}!}
 {!{- $url := printf "deckhouse.%s.flant.com" $env -}!}
+{!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- if eq $env "production" -}!}
   {!{- $url = "deckhouse.io" -}!}
+  {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD }}" -}!}
 {!{- end -}!}
 
@@ -186,6 +191,7 @@ steps:
     WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
     WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
     WERF_SET_URL: "global.url={!{ $url }!}"
+    WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
 # </template: deploy_site_template>
 {!{- end -}!}

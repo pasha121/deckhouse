@@ -2313,6 +2313,7 @@ jobs:
           WERF_NAMESPACE: deckhouse-web-production
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
       # </template: deploy_doc_template>
       # <template: deploy_site_template>
@@ -2330,6 +2331,7 @@ jobs:
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
           WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
       # </template: deploy_site_template>
       # <template: update_comment_on_finish>
@@ -2440,6 +2442,7 @@ jobs:
           WERF_NAMESPACE: deckhouse-web-stage
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.stage.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-stage"
       # </template: deploy_doc_template>
       # <template: deploy_doc_template>
@@ -2456,6 +2459,7 @@ jobs:
           WERF_NAMESPACE: deckhouse-web-production
           WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
           WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
       # </template: deploy_doc_template>
       # <template: update_comment_on_finish>

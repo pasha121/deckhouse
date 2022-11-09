@@ -42,14 +42,9 @@ spec:
               path: /health
               port: 8080
           volumeMounts:
-            - name: releasechannels
-              mountPath: /app/releasechannels
             - name: release-channels
               mountPath: /app/release-channels
       volumes:
-        - name: releasechannels
-          configMap:
-            name: releasechannels-data
         - name: release-channels
           configMap:
             name: release-channels-data
