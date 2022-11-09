@@ -2315,6 +2315,8 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.io"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_LOG_DEBUG: "true"
+          WERF_LOG_VERBOSE: "true"
       # </template: deploy_doc_template>
       # <template: deploy_site_template>
       - name: Deploy site to production
@@ -2333,6 +2335,8 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.io"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_LOG_DEBUG: "true"
+          WERF_LOG_VERBOSE: "true"
       # </template: deploy_site_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -2444,6 +2448,8 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.stage.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-stage"
+          WERF_LOG_DEBUG: "true"
+          WERF_LOG_VERBOSE: "true"
       # </template: deploy_doc_template>
       # <template: deploy_doc_template>
       - name: Deploy documentation to production
@@ -2461,6 +2467,8 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.io"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_LOG_DEBUG: "true"
+          WERF_LOG_VERBOSE: "true"
       # </template: deploy_doc_template>
       # <template: update_comment_on_finish>
       - name: Update comment on finish

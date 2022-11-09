@@ -267,6 +267,8 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.test.flant.com"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.test.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-test"
+          WERF_LOG_DEBUG: "true"
+          WERF_LOG_VERBOSE: "true"
       # </template: deploy_site_template>
 
       # <template: doc_version_template>
@@ -292,6 +294,8 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.test.flant.com"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.test.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-test"
+          WERF_LOG_DEBUG: "true"
+          WERF_LOG_VERBOSE: "true"
       # </template: deploy_doc_template>
 
       # <template: update_comment_on_finish>
