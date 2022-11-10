@@ -98,8 +98,8 @@ type VirtualMachineDiskSnapshot struct {
 	Name             string
 	Namespace        string
 	UID              ktypes.UID
-	StorageClassName *string
-	Size             *resource.Quantity
+	StorageClassName string
+	Size             resource.Quantity
 	Source           *corev1.TypedLocalObjectReference
 }
 
@@ -107,8 +107,8 @@ type ClusterVirtualMachineImageSnapshot struct {
 	Name             string
 	Namespace        string
 	UID              ktypes.UID
-	StorageClassName *string
-	Size             *resource.Quantity
+	StorageClassName string
+	Size             resource.Quantity
 	Remote           *cdiv1.DataVolumeSource
 	Source           *v1alpha1.TypedObjectReference
 }
@@ -234,7 +234,7 @@ func handleVirtualMachineDisks(input *go_hook.HookInput) error {
 
 	for _, sRaw := range diskSnap {
 		disk := sRaw.(*VirtualMachineDiskSnapshot)
-		if getDataVolume(&dataVolumeSnap, disk.Namespace, disk.Name) != nil {
+		if getDataVolume(&dataVolumeSnap, disk.Namespace, "disk-"+disk.Name) != nil {
 			// DataVolume found, noting to do
 			continue
 		}
@@ -242,7 +242,7 @@ func handleVirtualMachineDisks(input *go_hook.HookInput) error {
 		// DataVolume not found, needs to create a new one
 
 		// Lookup for storageClass
-		storageClass := getStorageClass(&storageClassSnap, *disk.StorageClassName)
+		storageClass := getStorageClass(&storageClassSnap, disk.StorageClassName)
 		if storageClass == nil {
 			input.LogEntry.Warnln("StorageClass not found. Skip")
 			continue
@@ -283,7 +283,7 @@ func handleVirtualMachineDisks(input *go_hook.HookInput) error {
 					VolumeMode:       storageClass.VolumeMode,
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: *disk.Size, // TODO nil check?
+							corev1.ResourceStorage: disk.Size, // TODO nil check?
 						},
 					},
 				},
