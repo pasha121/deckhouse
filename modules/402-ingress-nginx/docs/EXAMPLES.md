@@ -1,5 +1,5 @@
 ---
-title: "The ingress-nginx module: usage"
+title: "The ingress-nginx module: examples"
 ---
 
 {% raw %}
