@@ -1,5 +1,5 @@
 ---
-title: "The keepalived module: usage"
+title: "The keepalived module: examples"
 ---
 
 ## Three public IP addresses

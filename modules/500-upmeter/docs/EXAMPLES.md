@@ -1,5 +1,5 @@
 ---
-title: "The upmeter module: usage"
+title: "The upmeter module: examples"
 ---
 
 ## An example of the `UpmeterRemoteWrite` configuration

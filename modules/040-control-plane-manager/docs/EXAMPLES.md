@@ -1,5 +1,5 @@
 ---
-title: "Managing control plane: usage"
+title: "Managing control plane: examples"
 ---
 
 Below is a simple control plane configuration example:

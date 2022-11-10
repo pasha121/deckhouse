@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Azure: usage"
+title: "Cloud provider — Azure: examples"
 ---
 
 ## An example of the `AzureInstanceClass` custom resource

@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — AWS: usage"
+title: "Cloud provider — AWS: examples"
 ---
 
 ## An example of the `AWSInstanceClass` custom resource

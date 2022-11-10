@@ -1,5 +1,5 @@
 ---
-title: "Managing nodes: usage"
+title: "Managing nodes: examples"
 ---
 
 Below are some examples of `NodeGroup` description, as well as installing the cert-manager plugin for kubectl and setting the sysctl parameter.

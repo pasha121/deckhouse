@@ -1,5 +1,5 @@
 ---
-title: "The ceph-csi module: usage"
+title: "The ceph-csi module: examples"
 ---
 
 ## An example of the `CephCSIDriver` configuration

@@ -1,5 +1,5 @@
 ---
-title: "The node-local-dns module: usage"
+title: "The node-local-dns module: examples"
 ---
 
 ## An example of configuring a custom DNS for a Pod

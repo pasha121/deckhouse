@@ -1,5 +1,5 @@
 ---
-title: "Module pod-reloader: usage"
+title: "Module pod-reloader: examples"
 ---
 
 ## Tracking all changes in all attached resources: mounted as volumes or used in environment values

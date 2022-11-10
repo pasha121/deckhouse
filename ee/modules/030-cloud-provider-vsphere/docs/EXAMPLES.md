@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — VMware vSphere: usage"
+title: "Cloud provider — VMware vSphere: examples"
 ---
 
 Below is an example configuration for a VMware vSphere cloud provider.

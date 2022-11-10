@@ -1,5 +1,5 @@
 ---
-title: "The openvpn module: usage"
+title: "The openvpn module: examples"
 ---
 
 ## An example for bare metal clusters

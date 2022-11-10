@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — OpenStack: usage"
+title: "Cloud provider — OpenStack: examples"
 ---
 
 Below are two simple examples of OpenStack cloud provider configuration.

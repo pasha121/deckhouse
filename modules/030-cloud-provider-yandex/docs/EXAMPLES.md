@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — Yandex.Cloud: usage"
+title: "Cloud provider — Yandex.Cloud: examples"
 ---
 
 Below is an example of the Yandex.Cloud cloud provider configuration.

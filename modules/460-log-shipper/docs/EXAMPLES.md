@@ -1,5 +1,5 @@
 ---
-title: "Module log-shipper: usage"
+title: "Module log-shipper: examples"
 ---
 
 ## Getting logs from all cluster Pods and sending them to Loki

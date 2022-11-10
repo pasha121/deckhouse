@@ -1,5 +1,5 @@
 ---
-title: "The okmeter module: usage"
+title: "The okmeter module: examples"
 ---
 
 ## Example

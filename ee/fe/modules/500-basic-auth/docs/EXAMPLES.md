@@ -1,5 +1,5 @@
 ---
-title: "The basic-auth module: usage"
+title: "The basic-auth module: examples"
 ---
 
 ## An example of the configuration

@@ -1,5 +1,5 @@
 ---
-title: "Cloud provider — GCP: usage"
+title: "Cloud provider — GCP: examples"
 ---
 
 ## An example of the `GCPInstanceClass`custom resource

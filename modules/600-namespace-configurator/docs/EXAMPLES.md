@@ -1,5 +1,5 @@
 ---
-title: "The namespace-configurator module: usage"
+title: "The namespace-configurator module: examples"
 ---
 
 ## Example

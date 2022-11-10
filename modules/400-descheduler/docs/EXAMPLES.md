@@ -1,5 +1,5 @@
 ---
-title: "The descheduler module: usage"
+title: "The descheduler module: examples"
 ---
 
 ```yaml

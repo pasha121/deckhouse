@@ -1,11 +1,13 @@
 ---
-title: "The dashboard module: usage"
+title: "The deckhouse-web module: examples"
 ---
 
 ## An example of the module configuration
 
+Below is a simple example of the module configuration:
+
 ```yaml
-dashboard: |
+deckhouseWeb: |
   nodeSelector:
     node-role/example: ""
   tolerations:

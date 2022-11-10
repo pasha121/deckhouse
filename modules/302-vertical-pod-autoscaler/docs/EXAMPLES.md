@@ -1,5 +1,5 @@
 ---
-title: "The vertical-pod-autoscaler module: usage"
+title: "The vertical-pod-autoscaler module: examples"
 ---
 
 ## The module configuration

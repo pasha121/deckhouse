@@ -1,5 +1,5 @@
 ---
-title: "THe Prometheus Pushgateway module: usage"
+title: "THe Prometheus Pushgateway module: examples"
 ---
 
 ## Example of the module configuration

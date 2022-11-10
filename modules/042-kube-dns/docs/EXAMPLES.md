@@ -1,5 +1,5 @@
 ---
-title: "The kube-dns module: usage"
+title: "The kube-dns module: examples"
 ---
 
 ## Configuration example

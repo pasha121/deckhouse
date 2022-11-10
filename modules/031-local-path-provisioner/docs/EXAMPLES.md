@@ -1,5 +1,5 @@
 ---
-title: "The local-path-provisioner module: configuration examples"
+title: "The local-path-provisioner module: examples"
 ---
 
 ## Example CR `LocalPathProvisioner`

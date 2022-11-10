@@ -1,5 +1,5 @@
 ---
-title: "The network-policy-engine module: usage"
+title: "The network-policy-engine module: examples"
 ---
 
 ## Examples of network policies

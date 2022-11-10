@@ -1,5 +1,5 @@
 ---
-title: "The istio module: usage"
+title: "The istio module: examples"
 ---
 
 ## Circuit Breaker

@@ -1,5 +1,5 @@
 ---
-title: "The metallb module: usage"
+title: "The metallb module: examples"
 ---
 
 {% raw %}
