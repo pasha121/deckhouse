@@ -388,6 +388,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -821,6 +822,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -1254,6 +1256,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -1687,6 +1690,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -2120,6 +2124,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -2553,6 +2558,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -2986,6 +2992,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -3419,6 +3426,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -3852,6 +3860,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
@@ -4285,6 +4294,7 @@ jobs:
 
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
+          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
