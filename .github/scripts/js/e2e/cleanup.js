@@ -28,7 +28,7 @@ function buildFailedE2eTestAdditionalInfo({ needsContext, core, context }){
         const ranFor = outputs['ran_for'] || '';
         const runId = outputs['run_id'] || '';
         const clusterPrefix = needsContext[key].outputs['cluster_prefix'] || '';
-        const imagePath = needsContext[key].outputs['install-image-path'] || '';
+        const imagePath = needsContext[key].outputs['install_image_path'] || '';
 
         const argv = [
           abortFailedE2eCommand,
