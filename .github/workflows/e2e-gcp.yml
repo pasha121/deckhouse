@@ -209,7 +209,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;docker;1.20"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -298,7 +298,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -384,17 +384,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Docker/1.20"
         id: e2e_test_run
@@ -506,7 +506,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -635,7 +634,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;docker;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -724,7 +723,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -810,17 +809,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Docker/1.21"
         id: e2e_test_run
@@ -932,7 +931,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -1061,7 +1059,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;docker;1.22"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -1150,7 +1148,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -1236,17 +1234,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Docker/1.22"
         id: e2e_test_run
@@ -1358,7 +1356,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -1487,7 +1484,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;docker;1.23"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -1576,7 +1573,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -1662,17 +1659,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Docker/1.23"
         id: e2e_test_run
@@ -1784,7 +1781,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -1913,7 +1909,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;docker;1.24"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -2002,7 +1998,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -2088,17 +2084,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Docker/1.24"
         id: e2e_test_run
@@ -2210,7 +2206,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -2339,7 +2334,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;containerd;1.20"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -2428,7 +2423,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -2514,17 +2509,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Containerd/1.20"
         id: e2e_test_run
@@ -2636,7 +2631,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -2765,7 +2759,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;containerd;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -2854,7 +2848,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -2940,17 +2934,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Containerd/1.21"
         id: e2e_test_run
@@ -3062,7 +3056,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -3191,7 +3184,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;containerd;1.22"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -3280,7 +3273,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -3366,17 +3359,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Containerd/1.22"
         id: e2e_test_run
@@ -3488,7 +3481,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -3617,7 +3609,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;containerd;1.23"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -3706,7 +3698,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -3792,17 +3784,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Containerd/1.23"
         id: e2e_test_run
@@ -3914,7 +3906,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
@@ -4043,7 +4034,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;containerd;1.24"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      ci_commit_ref_name: ${{ github.event.inputs.ci_commit_ref_name }}
+      install_image_path: ${{ github.event.inputs.install-image-path }}
       pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: GCP
@@ -4132,7 +4123,7 @@ jobs:
         with:
           channel: ${{env.WERF_CHANNEL}}
       # </template: werf_install_step>
-      # <template: e2e_setup_step>
+
       - name: Setup
         id: setup
         env:
@@ -4218,17 +4209,17 @@ jobs:
           echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
           docker pull "${INSTALL_IMAGE_NAME}"
 
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
           echo '::echo::on'
           echo "::set-output name=tmp-dir-path::${TMP_DIR_PATH}"
-          echo "::set-output name=dhctl-log-file::${TMP_DIR_PATH}/dhctl.log"
           echo "::set-output name=dhctl-prefix::${DHCTL_PREFIX}"
           echo "::set-output name=install-image-name::${INSTALL_IMAGE_NAME}"
           echo "::set-output name=deckhouse-image-tag::${IMAGE_TAG}"
           echo "::set-output name=initial-image-tag::${INITIAL_IMAGE_TAG}"
+          echo "::set-output name=install-image-path::${IMAGE_INSTALL_PATH}"
 
           echo '::echo::off'
-
-      # </template: e2e_setup_step>
 
       - name: "Run e2e test: GCP/Containerd/1.24"
         id: e2e_test_run
@@ -4340,7 +4331,6 @@ jobs:
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
-          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
           LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
