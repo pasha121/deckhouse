@@ -840,23 +840,6 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
   });
 };
 
-// Triggering workflow_dispatch requires a ref to checkout workflows.
-// We use refs/heads/main for workflows and pass refs/pulls/head/NUM in
-// pull_request_ref field to checkout PR content.
-function pullRequestInfo({context, prNumber, ref}){
-  const targetRepo = context.payload.repository.full_name;
-  const prRepo = context.payload.pull_request.head.repo.full_name;
-  const prRef = context.payload.pull_request.head.ref;
-  return {
-    ci_commit_ref_name: prRepo === targetRepo ? prRef : `pr${prNumber}`,
-    pull_request_ref: ref,
-    pull_request_sha: context.payload.pull_request.head.sha,
-    pull_request_head_label: context.payload.pull_request.head.label
-  };
-}
-
-module.exports.pullRequestInfo = pullRequestInfo
-
 /**
  * Get labels from PR and determine a workflow to run next.
  *
@@ -976,7 +959,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
     const workflow_id = command.workflows[0];
     core.notice(`Run workflow '${JSON.stringify(command.workflows)}' for label '${label}'`);
     core.startGroup(`Trigger workflow_dispatch event ...`);
-//    try {
+    try {
       // Add a comment to pull request. https://docs.github.com/en/rest/issues/comments#create-an-issue-comment
       core.info(`Commenting on PR#${prNumber} ...`);
       const response = await github.rest.issues.createComment({
@@ -996,10 +979,20 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
         comment_id: '' + response.data.id
       };
 
-      const prInfo = pullRequestInfo({context, prNumber, ref});
+      // Triggering workflow_dispatch requires a ref to checkout workflows.
+      // We use refs/heads/main for workflows and pass refs/pulls/head/NUM in
+      // pull_request_ref field to checkout PR content.
+      const targetRepo = context.payload.repository.full_name;
+      const prRepo = context.payload.pull_request.head.repo.full_name;
+      const prRef = context.payload.pull_request.head.ref;
+      const prInfo = {
+        ci_commit_ref_name: prRepo === targetRepo ? prRef : `pr${prNumber}`,
+        pull_request_ref: ref,
+        pull_request_sha: context.payload.pull_request.head.sha,
+        pull_request_head_label: context.payload.pull_request.head.label
+      };
 
       core.debug(`Pull request info: ${JSON.stringify(prInfo)}`);
-    try{
       await startWorkflow({
         github,
         context,

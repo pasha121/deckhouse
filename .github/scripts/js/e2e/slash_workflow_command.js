@@ -40,7 +40,8 @@ function tryParseAbortE2eCluster({argv, context, core, github, ref}){
   // static;Static;containerd;1.21 - run parameters (provider;layout;cri;k8s version)
   // 3318607912 - run id (needs for get artifact)
   // 3318607912-1-con-1-21 - cluster prefix (needs for run dhctl bootstrap-phase abort command)
-  if (argv.length !== 4) {
+  // /sys/deckhouse-oss/install:pr2896 - install image path: for run necessary installer
+  if (argv.length !== 5) {
     return {err: 'clean failed e2e cluster should have 4 arguments'};
   }
 
@@ -51,11 +52,12 @@ function tryParseAbortE2eCluster({argv, context, core, github, ref}){
 
   const run_id = argv[2];
   const cluster_prefix = argv[3];
+  const installer_image_path = argv[4];
 
   const prNumber = context.payload.pull_request.number;
-  const {ci_commit_ref_name, pull_request_ref} = pullRequestInfo({context, prNumber, ref});
+  const pull_request_ref = ref;
 
-  core.debug(`pull request info: ${JSON.stringify({prNumber, ci_commit_ref_name, pull_request_ref})}`);
+  core.debug(`pull request info: ${JSON.stringify({prNumber, installer_image_path, pull_request_ref})}`);
 
   const provider = ranForSplit[0];
   const layout = ranForSplit[1];
@@ -65,11 +67,10 @@ function tryParseAbortE2eCluster({argv, context, core, github, ref}){
   const state_artifact_name = `failed_cluster_state_${provider}_${cri}_${k8sSlug}`;
 
   const inputs = {
-    ci_commit_ref_name,
-    pull_request_ref,
     run_id,
     state_artifact_name,
     cluster_prefix,
+    installer_image_path,
 
     layout,
     cri,
@@ -114,7 +115,7 @@ function tryParseRunE2e({argv, context, core, github, ref}){
   let targetRef = parseCommandArgumentAsRef(argv[1])
   if (argv.length === 3) {
     initialRef = targetRef
-    targetRef = parseCommandArgumentAsRef(parts[2])
+    targetRef = parseCommandArgumentAsRef(argv[2])
   }
 
   if(targetRef.err) {

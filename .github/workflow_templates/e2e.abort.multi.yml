@@ -64,12 +64,9 @@ on:
       k8s_version:
         description: 'CRI which was tested'
         required: true
-      pull_request_ref:
-        description: 'Git ref for checkout PR sources'
-        required: false
-      ci_commit_ref_name:
-        description: 'Git ref name for image tags'
-        required: false
+      installer_image_path:
+        description: 'Installer image without host'
+        required: true
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 
@@ -84,8 +81,6 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 6 }!}
-
-{!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
 
 {!{/* Jobs for each CRI and Kubernetes version */}!}
 {!{- $lastCommentNeeds := slice "started_at" "git_info" -}!}

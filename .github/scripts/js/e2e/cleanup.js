@@ -17,23 +17,25 @@ function buildFailedE2eTestAdditionalInfo({ needsContext, core, context }){
     core.debug(`buildFailedE2eTestAdditionalInfo result for ${key}: result`)
     if (result === 'failure' || result === 'cancelled') {
       if (needsContext[key].outputs){
-        const outputs = needsContext[key].outputs
+        const outputs = needsContext[key].outputs;
 
         if(!outputs['failed_cluster_stayed']){
           return null;
         }
 
         // ci_commit_branch
-        const connectStr = outputs['ssh_master_connection_string'] || ''
-        const ranFor = outputs['ran_for'] || ''
-        const runId = outputs['run_id'] || ''
-        const clusterPrefix = needsContext[key].outputs['cluster_prefix'] || ''
+        const connectStr = outputs['ssh_master_connection_string'] || '';
+        const ranFor = outputs['ran_for'] || '';
+        const runId = outputs['run_id'] || '';
+        const clusterPrefix = needsContext[key].outputs['cluster_prefix'] || '';
+        const imagePath = needsContext[key].outputs['install-image-path'] || '';
 
         const argv = [
           abortFailedE2eCommand,
           ranFor,
           runId,
           clusterPrefix,
+          imagePath,
         ]
 
         core.debug(`result argv: ${JSON.stringify(argv)}`)
@@ -42,7 +44,6 @@ function buildFailedE2eTestAdditionalInfo({ needsContext, core, context }){
         const argc = argv.filter(v => !!v).length
 
         if (shouldArgc !== argc) {
-          core.debug(`Incorrect outputs for ${key} ${shouldArgc} != ${argc}: ${JSON.stringify(argv)}; ${JSON.stringify(outputs)}`)
           core.error(`Incorrect outputs for ${key} ${shouldArgc} != ${argc}: ${JSON.stringify(argv)}; ${JSON.stringify(outputs)}`)
           return
         }
