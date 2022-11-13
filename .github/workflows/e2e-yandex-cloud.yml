@@ -209,7 +209,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;docker;1.20"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -457,6 +457,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -545,6 +546,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -642,7 +644,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;docker;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -890,6 +892,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -978,6 +981,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1075,7 +1079,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;docker;1.22"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -1323,6 +1327,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1411,6 +1416,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1508,7 +1514,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;docker;1.23"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -1756,6 +1762,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1844,6 +1851,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1941,7 +1949,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;docker;1.24"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Docker
@@ -2189,6 +2197,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2277,6 +2286,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2374,7 +2384,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;containerd;1.20"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -2622,6 +2632,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2710,6 +2721,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2807,7 +2819,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;containerd;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -3055,6 +3067,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3143,6 +3156,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3240,7 +3254,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;containerd;1.22"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -3488,6 +3502,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3576,6 +3591,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -3673,7 +3689,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;containerd;1.23"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -3921,6 +3937,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -4009,6 +4026,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -4106,7 +4124,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;containerd;1.24"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.event.inputs.install-image-path }}
+      install_image_path: ${{ github.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -4354,6 +4372,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -4442,6 +4461,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \

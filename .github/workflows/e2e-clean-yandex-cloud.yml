@@ -31,9 +31,14 @@ on:
       k8s_version:
         description: 'CRI which was tested'
         required: true
+      # needs for run correct installer image for abort
       installer_image_path:
         description: 'Installer image without host'
         required: true
+      # needs for destroy cloud clusters if cluster was bootstrapped fully, but e2e was not pass
+      ssh_connection_string:
+        description: 'SSH connection string'
+        required: false
 env:
 
   # <template: werf_envs>
@@ -219,6 +224,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -254,6 +260,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -477,6 +484,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -512,6 +520,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -735,6 +744,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -770,6 +780,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -993,6 +1004,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -1028,6 +1040,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1251,6 +1264,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -1286,6 +1300,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1509,6 +1524,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -1544,6 +1560,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -1767,6 +1784,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -1802,6 +1820,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2025,6 +2044,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -2060,6 +2080,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2283,6 +2304,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -2318,6 +2340,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -2541,6 +2564,7 @@ jobs:
           PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
         # <template: e2e_run_template>
           LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
@@ -2576,6 +2600,7 @@ jobs:
             -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
             -e CRI=${CRI} \
             -e PROVIDER=${PROVIDER:-not_provided} \
+            -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
             -e LAYOUT=${LAYOUT:-not_provided} \
             -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
             -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
