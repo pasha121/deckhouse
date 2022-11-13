@@ -162,7 +162,7 @@ function cleanup() {
   if [[ -n "$MASTER_CONNECTION_STRING" ]]; then
     arrConn=(${MASTER_CONNECTION_STRING//@/ })
     master_ip="${arrConn[1]}"
-    if [[ -n "${arrConn[0]}"]]; then
+    if [[ -n "${arrConn[0]}" ]]; then
       ssh_user="${arrConn[0]}"
     fi
   fi

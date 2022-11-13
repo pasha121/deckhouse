@@ -213,7 +213,6 @@ check_e2e_labels:
   outputs:
     ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
     run_id: ${{ github.run_id }}
-    state_artifact_name: failed_cluster_state_{!{ printf "%s_%s_%s" $ctx.provider $ctx.cri $ctx.kubernetesVersionSlug }!}
     # need for find state in artifact
     cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
     ran_for: {!{ printf "%s;%s;%s;%s" $ctx.provider $ctx.layout $ctx.cri $ctx.kubernetesVersion | quote }!}
