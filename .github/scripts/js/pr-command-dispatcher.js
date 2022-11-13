@@ -97,7 +97,7 @@ function dispatchPullRequestCommand({arg, core, context}){
 
   core.debug(`Have context in dispatch: '${JSON.stringify(context)}'`)
 
-  const prNumber = context.payload.pull_request.number;
+  const prNumber = context.payload.issue.number;
   // Construct head commit ref using pr number.
   const ref = `refs/pull/${ prNumber }/head`;
   core.notice(`Use ref: '${ref}'`)
