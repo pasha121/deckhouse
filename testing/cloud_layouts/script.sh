@@ -162,6 +162,9 @@ function cleanup() {
   if [[ -n "$MASTER_CONNECTION_STRING" ]]; then
     arrConn=(${MASTER_CONNECTION_STRING//@/ })
     master_ip="${arrConn[1]}"
+    if [[ -n "${arrConn[0]}"]]; then
+      ssh_user="${arrConn[0]}"
+    fi
   fi
 
   if [[ -z "$master_ip" ]]; then
@@ -181,7 +184,7 @@ function cleanup() {
     >&2 echo "No master IP: try to abort without cache, then abort from cache"
     abort_bootstrap || abort_bootstrap_from_cache
   else
-    >&2 echo "Master IP is '${master_ip}': try to destroy cluster, then abort from cache"
+    >&2 echo "Master IP is '${master_ip}', user is '${ssh_user}': try to destroy cluster, then abort from cache"
     destroy_cluster || abort_bootstrap_from_cache
   fi
 }
