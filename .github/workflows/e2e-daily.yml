@@ -141,7 +141,7 @@ jobs:
       ran_for: "aws;WithoutNAT;containerd;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.setup.outputs.install-image-path }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: AWS
       CRI: Containerd
@@ -642,7 +642,7 @@ jobs:
       ran_for: "azure;Standard;containerd;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.setup.outputs.install-image-path }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: Azure
       CRI: Containerd
@@ -1151,7 +1151,7 @@ jobs:
       ran_for: "gcp;WithoutNAT;containerd;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.setup.outputs.install-image-path }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: GCP
       CRI: Containerd
@@ -1648,7 +1648,7 @@ jobs:
       ran_for: "yandex-cloud;WithoutNAT;containerd;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.setup.outputs.install-image-path }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: Yandex.Cloud
       CRI: Containerd
@@ -2153,7 +2153,7 @@ jobs:
       ran_for: "openstack;Standard;containerd;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.setup.outputs.install-image-path }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: OpenStack
       CRI: Containerd
@@ -2650,7 +2650,7 @@ jobs:
       ran_for: "vsphere;Standard;containerd;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.setup.outputs.install-image-path }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: vSphere
       CRI: Containerd
@@ -3151,7 +3151,7 @@ jobs:
       ran_for: "static;Static;containerd;1.21"
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
-      install_image_path: ${{ github.setup.outputs.install-image-path }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
     env:
       PROVIDER: Static
       CRI: Containerd

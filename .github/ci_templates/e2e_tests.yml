@@ -218,7 +218,7 @@ check_e2e_labels:
     ran_for: {!{ printf "%s;%s;%s;%s" $ctx.provider $ctx.layout $ctx.cri $ctx.kubernetesVersion | quote }!}
     failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
     issue_number: ${{ inputs.issue_number }}
-    install_image_path: ${{ github.setup.outputs.install-image-path }}
+    install_image_path: ${{ steps.setup.outputs.install-image-path }}
   env:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
