@@ -119,6 +119,7 @@ run: |
     -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
     -e CRI=${CRI} \
     -e PROVIDER=${PROVIDER:-not_provided} \
+    -e MASTER_CONNECTION_STRING=${MASTER_CONNECTION_STRING:-} \
     -e LAYOUT=${LAYOUT:-not_provided} \
     -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
     -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
@@ -218,8 +219,7 @@ check_e2e_labels:
     ran_for: {!{ printf "%s;%s;%s;%s" $ctx.provider $ctx.layout $ctx.cri $ctx.kubernetesVersion | quote }!}
     failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
     issue_number: ${{ inputs.issue_number }}
-    install_image_path: ${{ github.event.inputs.install-image-path }}
-    pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
+    install_image_path: ${{ github.setup.outputs.install-image-path }}
   env:
     PROVIDER: {!{ $ctx.providerName }!}
     CRI: {!{ $ctx.criName }!}
@@ -535,6 +535,7 @@ check_e2e_labels:
         PREFIX: ${{ github.event.inputs.cluster_prefix }}
         INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-full }}
         DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_connection_string }}
   {!{- tmpl.Exec "e2e_run_template" (slice .provider "cleanup") | strings.Indent 6 }!}
 
     - name: Remove failed cluster label

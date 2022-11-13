@@ -158,14 +158,26 @@ function cleanup() {
     return $exitCode
   fi
 
-  # Check if 'dhctl bootstrap' was not started.
-  if [[ ! -f "$bootstrap_log" ]] ; then
-    >&2 echo "Run cleanup ... no bootstrap.log, no need to cleanup."
-    return 0
+  master_ip="$MASTER_CONNECTION_STRING"
+  if [[ -n "$MASTER_CONNECTION_STRING" ]]; then
+    arrConn=(${MASTER_CONNECTION_STRING//@/ })
+    master_ip="${arrConn[1]}"
+  fi
+
+  if [[ -z "$master_ip" ]]; then
+      # Check if 'dhctl bootstrap' was not started.
+      if [[ ! -f "$bootstrap_log" ]] ; then
+        >&2 echo "Run cleanup ... no bootstrap.log, no need to cleanup."
+        return 0
+      fi
+
+      if ! master_ip="$(parse_master_ip_from_log)" ; then
+        master_ip=""
+      fi
   fi
 
   >&2 echo "Run cleanup ..."
-  if ! master_ip="$(parse_master_ip_from_log)" ; then
+  if [[ -z "$master_ip" ]] ; then
     >&2 echo "No master IP: try to abort without cache, then abort from cache"
     abort_bootstrap || abort_bootstrap_from_cache
   else

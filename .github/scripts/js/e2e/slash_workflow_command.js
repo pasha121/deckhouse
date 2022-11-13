@@ -41,8 +41,8 @@ function tryParseAbortE2eCluster({argv, context, core, github, ref}){
   // 3318607912 - run id (needs for get artifact)
   // 3318607912-1-con-1-21 - cluster prefix (needs for run dhctl bootstrap-phase abort command)
   // /sys/deckhouse-oss/install:pr2896 - install image path: for run necessary installer
-  if (argv.length !== 5) {
-    return {err: 'clean failed e2e cluster should have 4 arguments'};
+  if (argv.length !== 6) {
+    return {err: 'clean failed e2e cluster should have 5 arguments'};
   }
 
   const ranForSplit = argv[1].split(';').map(v => v.trim()).filter(v => !!v);
@@ -53,6 +53,7 @@ function tryParseAbortE2eCluster({argv, context, core, github, ref}){
   const run_id = argv[2];
   const cluster_prefix = argv[3];
   const installer_image_path = argv[4];
+  const sshConnectStr = argv[5] || '';
 
   const prNumber = context.payload.pull_request.number;
   const pull_request_ref = ref;
@@ -71,6 +72,7 @@ function tryParseAbortE2eCluster({argv, context, core, github, ref}){
     state_artifact_name,
     cluster_prefix,
     installer_image_path,
+    ssh_connection_string: sshConnectStr,
 
     layout,
     cri,

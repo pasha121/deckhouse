@@ -48,6 +48,9 @@ function buildFailedE2eTestAdditionalInfo({ needsContext, core, context }){
           return
         }
 
+        // connection string is not required
+        argv.push(connectStr)
+
         const splitRunFor = ranFor.replace(';', ' ');
         const outConnectStr = connectStr ? `\`ssh -i ~/.ssh/e2e-id-rsa ${connectStr}\` - connect for debugging;` : '';
 

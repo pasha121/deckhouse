@@ -64,9 +64,14 @@ on:
       k8s_version:
         description: 'CRI which was tested'
         required: true
+      # needs for run correct installer image for abort
       installer_image_path:
         description: 'Installer image without host'
         required: true
+      # needs for destroy cloud clusters if cluster was bootstrapped fully, but e2e was not pass
+      ssh_connection_string:
+        description: 'SSH connection string'
+        required: false
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 

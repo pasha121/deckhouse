@@ -210,7 +210,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Docker
@@ -636,7 +635,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Docker
@@ -1062,7 +1060,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Docker
@@ -1488,7 +1485,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Docker
@@ -1914,7 +1910,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Docker
@@ -2340,7 +2335,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Containerd
@@ -2766,7 +2760,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Containerd
@@ -3192,7 +3185,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Containerd
@@ -3618,7 +3610,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Containerd
@@ -4044,7 +4035,6 @@ jobs:
       failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
       issue_number: ${{ inputs.issue_number }}
       install_image_path: ${{ github.event.inputs.install-image-path }}
-      pull_request_ref: ${{ github.event.inputs.pull_request_ref }}
     env:
       PROVIDER: Static
       CRI: Containerd
