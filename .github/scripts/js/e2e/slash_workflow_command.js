@@ -43,7 +43,7 @@ function tryParseAbortE2eCluster({argv, context, core, github, ref}){
   // /sys/deckhouse-oss/install:pr2896 - install image path: for run necessary installer
   // user@127.0.0.1 - [additional] connection string, needs for fully bootstrapped cluster, but e2e was failed.
   //                  we  need it for destroy
-  if (argv.length !== 5) {
+  if (argv.length < 5) {
     return {err: 'clean failed e2e cluster should have 4 arguments'};
   }
 
