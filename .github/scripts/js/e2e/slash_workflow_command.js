@@ -55,7 +55,7 @@ function tryParseAbortE2eCluster({argv, context, core, github, ref}){
   const installer_image_path = argv[4];
   const sshConnectStr = argv[5] || '';
 
-  const prNumber = context.payload.pull_request.number;
+  const prNumber = context.payload.issue.number;
   const pull_request_ref = ref;
 
   core.debug(`pull request info: ${JSON.stringify({prNumber, installer_image_path, pull_request_ref})}`);
