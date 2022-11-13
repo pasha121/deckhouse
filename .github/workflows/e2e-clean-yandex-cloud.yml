@@ -166,7 +166,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
@@ -426,7 +426,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
@@ -686,7 +686,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
@@ -946,7 +946,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
@@ -1206,7 +1206,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
@@ -1466,7 +1466,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
@@ -1726,7 +1726,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
@@ -1986,7 +1986,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
@@ -2246,7 +2246,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
@@ -2506,7 +2506,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
           DHCTL_PREFIX: ${{ github.event.inputs.cluster_prefix }}
           INSTALL_IMAGE_PATH: ${{ github.event.inputs.installer_image_path }}
         run: |
