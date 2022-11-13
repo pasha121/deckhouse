@@ -82,7 +82,7 @@ function tryParseAbortE2eCluster({argv, context, core, github, ref}){
     layout,
     cri,
     k8s_version,
-    issue_number: prNumber,
+    issue_number: prNumber.toString(),
   };
 
   core.debug(`e2e abort inputs: ${JSON.stringify(inputs)}`)
